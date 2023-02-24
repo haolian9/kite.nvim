@@ -14,14 +14,24 @@ a file picker for nvim
 
 ## status: just works
 
-## installation
+## prerequisites
 * linux
 * nvim 0.8.*
 * haolian9/infra.nvim
 
 ## usage
-* `.fly()` # show Kite in a floatwin
-* `.land()` # show Kite in the current buffer
+* `:lua require'kite'.fly()`
 
-thanks:
+## keymaps bound to Kite window
+* h/l:       cd out/in
+* j/k:       up/down cursor
+* <cr>,gf,i: edit
+* o:         split
+* t:         tabedit
+* v,<c-/>:   vsplit
+* -:         cd in parent dir
+* r:         refresh entries of the current dir
+* q,<c-[>:   close Kite window
+
+## thanks
 * vim-dirvish which inspired me to roll my own one.
