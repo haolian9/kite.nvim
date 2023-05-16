@@ -1,5 +1,8 @@
 a file picker for nvim
 
+https://github.com/haolian9/zongzi/assets/6236829/1ce73de9-b494-4677-ac43-c0852a8485fe
+
+
 ## features
 * uses floating windows
 * the floatwin respects cursor position and sets proper width
