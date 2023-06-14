@@ -1,7 +1,8 @@
+local jelly = require("infra.jellyfish")("kite.state")
+local strlib = require("infra.strlib")
+
 local formatter = require("kite.formatter")
 local scanner = require("kite.scanner")
-
-local jelly = require("infra.jellyfish")("kite.state")
 
 local M = {
   -- {root: {entries: [formated-path], cursor_line: 0-based-int, widest: #entry}}
@@ -35,9 +36,7 @@ function M:cursor_line(root, newval)
   _set(root, "cursor_line", newval)
 end
 
-function M:forget_entries(root)
-  _set(root, "entries", nil)
-end
+function M:forget_entries(root) _set(root, "entries", nil) end
 
 ---@return string[]
 function M:entries(root)
@@ -89,8 +88,8 @@ function M:trail_behind(to, from)
   local function _heading()
     if from == nil then return "lost" end
     if to == from then return "stay" end
-    if vim.startswith(to, from) then return "go_inside" end
-    if vim.startswith(from, to) then return "go_outside" end
+    if strlib.startswith(to, from) then return "go_inside" end
+    if strlib.startswith(from, to) then return "go_outside" end
     return "lost"
   end
 

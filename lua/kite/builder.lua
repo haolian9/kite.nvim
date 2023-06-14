@@ -1,18 +1,22 @@
 --ui builder
 local M = {}
 
-local api = vim.api
-
 local bufrename = require("infra.bufrename")
+local prefer = require("infra.prefer")
+local bufmap = require("infra.keymap.buffer")
+
+local api = vim.api
 
 local facts = require("kite.facts")
 local state = require("kite.state")
 
-function M:dimensions(root)
+function M:geometry(root)
   local width = math.max(30, math.min(state:widest(root) + 4, 50))
-  -- 1 plus for winbar
+  -- 1 for winbar
   local height = math.min(math.floor(vim.o.lines * 0.9), math.max(2, #state:entries(root) + 1))
-  return width, height, 1, 0
+  -- no cursor jumping
+  local row = -(state:cursor_line(root) or 2)
+  return width, height, row, 0
 end
 
 function M:new_skeleton(root)
@@ -22,38 +26,39 @@ function M:new_skeleton(root)
     bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_var(bufnr, facts.totem, true)
     api.nvim_buf_set_var(bufnr, "kite_root", root)
-    api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
-    api.nvim_buf_set_option(bufnr, "filetype", "kite")
+    prefer.bo(bufnr, "bufhidden", "wipe")
+    prefer.bo(bufnr, "filetype", "kite")
   end
 
   -- buf keymap
   do
     local function rhs_open(open_cmd)
-      return string.format([[<cmd>lua require'kite'.rhs_open(%d, '%s')<cr>]], bufnr, open_cmd)
+      return function() require("kite").rhs_open(bufnr, open_cmd) end
     end
-    local rhs_parent = string.format([[<cmd>lua require'kite'.rhs_parent(%d)<cr>]], bufnr)
-    api.nvim_buf_set_keymap(bufnr, "n", [[<cr>]], rhs_open("e"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "gf", rhs_open("e"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "i", rhs_open("e"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "o", rhs_open("sp"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "t", rhs_open("tabe"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "v", rhs_open("vs"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", [[<c-/>]], rhs_open("vs"), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "h", rhs_parent, { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "l", string.format([[<cmd>lua require'kite'.rhs_open_dir(%d)<cr>]], bufnr), { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "-", rhs_parent, { noremap = true })
-    api.nvim_buf_set_keymap(bufnr, "n", "r", string.format([[<cmd>lua require'kite'.rhs_refresh(%d)<cr>]], bufnr), { noremap = true })
+    local function rhs_parent() return require("kite").rhs_parent(bufnr) end
+    local bm = bufmap.wraps(bufnr)
+    bm.n([[<cr>]], rhs_open("e"))
+    bm.n("gf", rhs_open("e"))
+    bm.n("i", rhs_open("e"))
+    bm.n("o", rhs_open("sp"))
+    bm.n("t", rhs_open("tabe"))
+    bm.n("v", rhs_open("vs"))
+    bm.n([[<c-/>]], rhs_open("vs"))
+    bm.n("h", rhs_parent)
+    bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
+    bm.n("-", rhs_parent)
+    bm.n("r", function() require("kite").rhs_refresh(bufnr) end)
   end
 
   return bufnr
 end
 
----@param win_id number
+---@param winid number
 ---@param bufnr number
 ---@param root string @absolute path
 ---@param resize boolean
-function M:fill_skeleton(win_id, bufnr, root, resize)
-  assert(win_id ~= nil and bufnr ~= nil and root ~= nil and resize ~= nil)
+function M:fill_skeleton(winid, bufnr, root, resize)
+  assert(winid ~= nil and bufnr ~= nil and root ~= nil and resize ~= nil)
 
   -- for cursor_line bounds check
   local entries_count = 0
@@ -63,20 +68,21 @@ function M:fill_skeleton(win_id, bufnr, root, resize)
     bufrename(bufnr, string.format("kite://%s", vim.fs.basename(root)))
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     local entries = state:entries(root)
-    api.nvim_buf_set_option(bufnr, "modifiable", true)
+    local bo = prefer.buf(bufnr)
+    bo.modifiable = true
     api.nvim_buf_set_lines(bufnr, 0, -1, false, entries)
-    api.nvim_buf_set_option(bufnr, "modifiable", false)
+    bo.modifiable = false
     entries_count = #entries
   end
 
   -- win
   do
     if resize then
-      local width, height = self:dimensions(root)
-      api.nvim_win_set_width(win_id, width)
-      api.nvim_win_set_height(win_id, height)
+      local width, height = self:geometry(root)
+      api.nvim_win_set_width(winid, width)
+      api.nvim_win_set_height(winid, height)
     end
-    api.nvim_win_set_option(win_id, "winbar", root)
+    prefer.wo(winid, "winbar", root)
     local cursor_line
     do
       cursor_line = state:cursor_line(root)
@@ -88,7 +94,7 @@ function M:fill_skeleton(win_id, bufnr, root, resize)
         cursor_line = entries_count
       end
     end
-    api.nvim_win_set_cursor(win_id, { cursor_line, 0 })
+    api.nvim_win_set_cursor(winid, { cursor_line, 0 })
   end
 end
 

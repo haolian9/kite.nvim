@@ -1,3 +1,15 @@
+--
+-- design/features:
+-- * refresh current root
+-- * edit sibling file
+-- * live rendering ~~dir buffer~~
+-- * can be attached to current window
+--
+-- backlog
+-- * proper cursor position
+--   * change cursor: up to parent, down to child, open file
+--
+
 local M = {}
 
 local api = vim.api
@@ -5,6 +17,9 @@ local api = vim.api
 local fs = require("infra.fs")
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("kite")
+local strlib = require("infra.strlib")
+local prefer = require("infra.prefer")
+local bufmap = require("infra.keymap.buffer")
 
 local facts = require("kite.facts")
 local state = require("kite.state")
@@ -15,16 +30,14 @@ local formatter = require("kite.formatter")
 ---@param bufnr number
 ---@return string
 local function buf_root(bufnr)
-  local buftype = api.nvim_buf_get_option(bufnr, "buftype")
-  if buftype ~= "" then error(string.format("not a regular buffer: buftype=%s", buftype)) end
+  local buftype = prefer.bo(bufnr, "buftype")
+  if not (buftype == "" or buftype == "help") then error(string.format("not a regular/help buffer: buftype=%s", buftype)) end
   local name = api.nvim_buf_get_name(bufnr)
-  if string.find(name, "://", nil, true) ~= nil then error("not a regular buffer: protocol://") end
+  if strlib.find(name, "://") ~= nil then error("not a regular buffer: protocol://") end
   return vim.fn.fnamemodify(name, ":p:h")
 end
 
-local function is_landed_kite_win(win_id)
-  return api.nvim_win_get_config(win_id).relative == ""
-end
+local function is_landed_kite_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
 local function edit_file(kite_win_id, path, win_open_cmd)
   assert(win_open_cmd)
@@ -32,17 +45,17 @@ local function edit_file(kite_win_id, path, win_open_cmd)
   -- close kite win when
   -- * kite buffer may not be showed in a window
   -- * landed kite window must not be closed
-  if not (kite_win_id and is_landed_kite_win(kite_win_id)) then api.nvim_win_close(kite_win_id, false) end
+  if kite_win_id and not is_landed_kite_win(kite_win_id) then api.nvim_win_close(kite_win_id, false) end
 
   ex(win_open_cmd, path)
 end
 
-local function cd(win_id, kite_bufnr, root)
+local function cd(winid, kite_bufnr, root)
   local path_from = builder.kite_root(kite_bufnr)
   state:trail_behind(root, path_from)
 
-  local need_resize = not is_landed_kite_win(win_id)
-  builder:fill_skeleton(win_id, kite_bufnr, root, need_resize)
+  local need_resize = not is_landed_kite_win(winid)
+  builder:fill_skeleton(winid, kite_bufnr, root, need_resize)
 end
 
 -- show content of current buffer's parent dir in a floatwin
@@ -55,7 +68,7 @@ function M.fly()
   local kite_win_id
   -- win init
   do
-    local width, height, row, col = builder:dimensions(root)
+    local width, height, row, col = builder:geometry(root)
     -- stylua: ignore
     kite_win_id = api.nvim_open_win(kite_bufnr, true, {
       relative = "cursor", style = "minimal", border = "single",
@@ -65,7 +78,7 @@ function M.fly()
 
   -- win setup
   do
-    local wo = vim.wo[kite_win_id]
+    local wo = prefer.win(kite_win_id)
     wo.number = false
     wo.relativenumber = false
     api.nvim_win_set_hl_ns(kite_win_id, facts.ns)
@@ -78,15 +91,16 @@ function M.fly()
         if api.nvim_win_is_valid(kite_win_id) then api.nvim_win_close(kite_win_id, true) end
       end,
     })
-    local close_win = string.format([[<cmd>lua vim.api.nvim_win_close(%s, false)<cr>]], kite_win_id)
-    api.nvim_buf_set_keymap(kite_bufnr, "n", "q", close_win, { noremap = true })
-    api.nvim_buf_set_keymap(kite_bufnr, "n", "<c-[>", close_win, { noremap = true })
+    local function close_win() api.nvim_win_close(kite_win_id, false) end
+    local bm = bufmap.wraps(kite_bufnr)
+    bm.n("q", close_win)
+    bm.n("<c-[>", close_win)
   end
 
   builder:fill_skeleton(kite_win_id, kite_bufnr, root, false)
   -- update cursor only when kite fly from normal buffer
   do
-    if api.nvim_buf_get_option(bufnr, "buftype") ~= "" then return end
+    if prefer.bo(bufnr, "buftype") ~= "" then return end
     local basename = vim.fs.basename(api.nvim_buf_get_name(bufnr))
     local cursor_line = state:entry_index(state:entries(root), formatter.file(basename), 1)
     api.nvim_win_set_cursor(kite_win_id, { cursor_line, 0 })
