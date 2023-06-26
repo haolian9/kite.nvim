@@ -20,6 +20,7 @@ local jelly = require("infra.jellyfish")("kite")
 local strlib = require("infra.strlib")
 local prefer = require("infra.prefer")
 local bufmap = require("infra.keymap.buffer")
+local dictlib = require("infra.dictlib")
 
 local facts = require("kite.facts")
 local state = require("kite.state")
@@ -245,7 +246,7 @@ function M.clear_cache()
     total = total + #cache.entries
     table.insert(counts, string.format("%s: %s", root, #cache.entries))
   end
-  state.cache = {}
+  state.cache = dictlib.CappedDict(512)
   jelly.info("cleared cache: %d", total)
   jelly.info("cache details: %s", table.concat(counts, ", "))
 end

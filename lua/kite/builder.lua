@@ -13,7 +13,7 @@ local state = require("kite.state")
 function M:geometry(root)
   local width = math.max(30, math.min(state:widest(root) + 4, 50))
   -- 1 for winbar
-  local height = math.min(math.floor(vim.o.lines * 0.9), math.max(2, #state:entries(root) + 1))
+  local height = math.min(math.floor(vim.go.lines * 0.9), math.max(2, #state:entries(root) + 1))
   -- no cursor jumping
   local row = -(state:cursor_line(root) or 2)
   return width, height, row, 0
@@ -78,9 +78,20 @@ function M:fill_skeleton(winid, bufnr, root, resize)
   -- win
   do
     if resize then
-      local width, height = self:geometry(root)
-      api.nvim_win_set_width(winid, width)
-      api.nvim_win_set_height(winid, height)
+      if true then
+        local width, height = self:geometry(root)
+        api.nvim_win_set_width(winid, width)
+        api.nvim_win_set_height(winid, height)
+      else
+        ---todo: await https://github.com/neovim/neovim/issues/24129
+        ---also nvim_set_config will clear all the previous setting of the window
+        local width, height, row, col = self:geometry(root)
+        assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
+        -- stylua: ignore
+        api.nvim_win_set_config(winid, {
+        relative = "cursor",
+        width = width, height = height, row = row, col = col })
+      end
     end
     prefer.wo(winid, "winbar", root)
     local cursor_line

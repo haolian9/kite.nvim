@@ -1,5 +1,6 @@
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
+local dictlib = require("infra.dictlib")
 
 local formatter = require("kite.formatter")
 local scanner = require("kite.scanner")
@@ -7,7 +8,7 @@ local scanner = require("kite.scanner")
 local M = {
   -- {root: {entries: [formated-path], cursor_line: 0-based-int, widest: #entry}}
   ---@type {[string]: {entries: string[]?, cursor_line: number?, widest: number?}}
-  cache = {},
+  cache = dictlib.CappedDict(512),
 }
 
 ---@param root string
