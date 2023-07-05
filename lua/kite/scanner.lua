@@ -18,7 +18,7 @@ return function(dir)
       -- maybe: respects .gitignore
       return true
     end, fs.iterdir(dir, resolve_symlink))
-    iter = fn.slice(files, 1, facts.max_children)
+    iter = fn.slice(files, 1, facts.max_children + 1)
   end
   local entries = fn.concrete(fn.map(function(fname, ftype)
     if ftype == "file" then
