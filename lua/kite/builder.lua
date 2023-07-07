@@ -2,15 +2,15 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
-local prefer = require("infra.prefer")
 local bufmap = require("infra.keymap.buffer")
+local prefer = require("infra.prefer")
 
 local api = vim.api
 
 local facts = require("kite.facts")
 local state = require("kite.state")
 
-function M:geometry(root)
+function M.geometry(root)
   local width = math.max(30, math.min(state:widest(root) + 4, 50))
   -- 1 for winbar
   local height = math.min(math.floor(vim.go.lines * 0.9), math.max(2, #state:entries(root) + 1))
@@ -19,13 +19,17 @@ function M:geometry(root)
   return width, height, row, 0
 end
 
-function M:new_skeleton(root)
+---@param root string @absolute path
+---@param anchor_winid integer
+---@return integer @bufnr
+function M.new_skeleton(root, anchor_winid)
   local bufnr
   -- buf init
   do
     bufnr = api.nvim_create_buf(false, true)
     api.nvim_buf_set_var(bufnr, facts.totem, true)
     api.nvim_buf_set_var(bufnr, "kite_root", root)
+    api.nvim_buf_set_var(bufnr, "kite_anchor_winid", anchor_winid)
     prefer.bo(bufnr, "bufhidden", "wipe")
     prefer.bo(bufnr, "filetype", "kite")
   end
@@ -37,13 +41,13 @@ function M:new_skeleton(root)
     end
     local function rhs_parent() return require("kite").rhs_parent(bufnr) end
     local bm = bufmap.wraps(bufnr)
-    bm.n([[<cr>]], rhs_open("e"))
+    bm.n("<cr>", rhs_open("e"))
     bm.n("gf", rhs_open("e"))
     bm.n("i", rhs_open("e"))
     bm.n("o", rhs_open("sp"))
     bm.n("t", rhs_open("tabe"))
     bm.n("v", rhs_open("vs"))
-    bm.n([[<c-/>]], rhs_open("vs"))
+    bm.n("<c-/>", rhs_open("vs"))
     bm.n("h", rhs_parent)
     bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
     bm.n("-", rhs_parent)
@@ -57,7 +61,7 @@ end
 ---@param bufnr number
 ---@param root string @absolute path
 ---@param resize boolean
-function M:fill_skeleton(winid, bufnr, root, resize)
+function M.fill_skeleton(winid, bufnr, root, resize)
   assert(winid ~= nil and bufnr ~= nil and root ~= nil and resize ~= nil)
 
   -- for cursor_line bounds check
@@ -78,20 +82,14 @@ function M:fill_skeleton(winid, bufnr, root, resize)
   -- win
   do
     if resize then
-      if true then
-        local width, height = self:geometry(root)
-        api.nvim_win_set_width(winid, width)
-        api.nvim_win_set_height(winid, height)
-      else
-        ---todo: await https://github.com/neovim/neovim/issues/24129
-        ---also nvim_set_config will clear all the previous setting of the window
-        local width, height, row, col = self:geometry(root)
-        assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
-        -- stylua: ignore
-        api.nvim_win_set_config(winid, {
-        relative = "cursor",
-        width = width, height = height, row = row, col = col })
-      end
+      local width, height, row, col = M.geometry(root)
+      assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
+      api.nvim_win_call(M.kite_anchor_winid(bufnr), function()
+        ---todo: this is a workaround for https://github.com/neovim/neovim/issues/24129
+        api.nvim_win_set_config(winid, { relative = "cursor", width = width, height = height, row = row, col = col })
+      end)
+      ---todo: nvim_win_set_config will clear hl_ns, it seems.
+      api.nvim_win_set_hl_ns(winid, facts.ns)
     end
     prefer.wo(winid, "winbar", root)
     local cursor_line
@@ -109,19 +107,27 @@ function M:fill_skeleton(winid, bufnr, root, resize)
   end
 end
 
-local function is_valid_kite_buf(bufnr)
-  if not api.nvim_buf_is_valid(bufnr) then return false end
-  if vim.b[bufnr][facts.totem] == nil then return false end
-  return true
-end
+do
+  local function is_valid_kite_buf(bufnr)
+    if not api.nvim_buf_is_valid(bufnr) then return false end
+    if vim.b[bufnr][facts.totem] == nil then return false end
+    return true
+  end
 
----@param bufnr number
----@return string
-function M.kite_root(bufnr)
-  if not is_valid_kite_buf(bufnr) then error(string.format("not a valid kite buf, bufnr=%d", bufnr)) end
-  local root = vim.b[bufnr]["kite_root"]
-  assert(root ~= nil and root ~= "")
-  return root
+  ---@param bufnr integer
+  ---@param name string
+  ---@return any
+  local function get_kite_var(bufnr, name)
+    if not is_valid_kite_buf(bufnr) then error(string.format("not a valid kite buf, bufnr=%d", bufnr)) end
+    local val = api.nvim_buf_get_var(bufnr, name)
+    assert(val ~= nil)
+    return val
+  end
+
+  function M.kite_root(bufnr) return tostring(get_kite_var(bufnr, "kite_root")) end
+
+  ---@return integer
+  function M.kite_anchor_winid(bufnr) return assert(tonumber(get_kite_var(bufnr, "kite_anchor_winid"))) end
 end
 
 return M
