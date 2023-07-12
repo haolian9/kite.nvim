@@ -1,14 +1,14 @@
+local M = {}
+
 local api = vim.api
 
-local ns
+M.totem = "kite"
+M.max_children = 499
+
 do
-  ns = api.nvim_create_namespace("kite")
-  api.nvim_set_hl(ns, "NormalFloat", { ctermbg = 15, ctermfg = 8 })
-  api.nvim_set_hl(ns, "WinSeparator", { ctermfg = 243 })
+  M.hl_ns = api.nvim_create_namespace("kite")
+  api.nvim_set_hl(M.hl_ns, "NormalFloat", { ctermbg = 15, ctermfg = 8 })
+  api.nvim_set_hl(M.hl_ns, "WinSeparator", { ctermfg = 243 })
 end
 
-return {
-  totem = "kite",
-  max_children = 499,
-  ns = ns,
-}
+return M

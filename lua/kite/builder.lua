@@ -89,7 +89,7 @@ function M.fill_skeleton(winid, bufnr, root, resize)
         api.nvim_win_set_config(winid, { relative = "cursor", width = width, height = height, row = row, col = col })
       end)
       ---todo: nvim_win_set_config will clear hl_ns, it seems.
-      api.nvim_win_set_hl_ns(winid, facts.ns)
+      api.nvim_win_set_hl_ns(winid, facts.hl_ns)
     end
     prefer.wo(winid, "winbar", root)
     local cursor_line

@@ -1,10 +1,9 @@
-local fs = require("infra.fs")
 local fn = require("infra.fn")
+local fs = require("infra.fs")
+local jelly = require("infra.jellyfish")("kite.scanner")
 
 local facts = require("kite.facts")
 local formatter = require("kite.formatter")
-
-local jelly = require("infra.jellyfish")("kite.scanner")
 
 --scan entities in the given dir, each entity will be formatted by the formatter
 ---@return string[]

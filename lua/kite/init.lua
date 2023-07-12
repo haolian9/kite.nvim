@@ -47,45 +47,46 @@ do
 
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 
-    local kite_win_id
+    local kite_winid
     -- win init
     do
       local width, height, row, col = builder.geometry(root)
-    -- stylua: ignore
-    kite_win_id = api.nvim_open_win(kite_bufnr, true, {
-      relative = "cursor", style = "minimal", border = "single",
-      width = width, height = height, row = row, col = col,
-    })
+      -- stylua: ignore
+      kite_winid = api.nvim_open_win(kite_bufnr, true, {
+        relative = "cursor", style = "minimal", border = "single",
+        width = width, height = height, row = row, col = col,
+      })
     end
 
     -- win setup
     do
-      local wo = prefer.win(kite_win_id)
+      local wo = prefer.win(kite_winid)
       wo.number = false
       wo.relativenumber = false
-      api.nvim_win_set_hl_ns(kite_win_id, facts.ns)
+      api.nvim_win_set_hl_ns(kite_winid, facts.hl_ns)
+      -- wo.winhl = 'NormalFloat:Normal'
     end
 
     -- win cleanup
     do
       api.nvim_create_autocmd("WinLeave", {
         callback = function()
-          if api.nvim_win_is_valid(kite_win_id) then api.nvim_win_close(kite_win_id, true) end
+          if api.nvim_win_is_valid(kite_winid) then api.nvim_win_close(kite_winid, true) end
         end,
       })
-      local function close_win() api.nvim_win_close(kite_win_id, false) end
+      local function close_win() api.nvim_win_close(kite_winid, false) end
       local bm = bufmap.wraps(kite_bufnr)
       bm.n("q", close_win)
       bm.n("<c-[>", close_win)
     end
 
-    builder.fill_skeleton(kite_win_id, kite_bufnr, root, false)
+    builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
     -- update cursor only when kite fly from normal buffer
     do
       if prefer.bo(bufnr, "buftype") ~= "" then return end
       local basename = vim.fs.basename(api.nvim_buf_get_name(bufnr))
       local cursor_line = state:entry_index(state:entries(root), formatter.file(basename), 1)
-      api.nvim_win_set_cursor(kite_win_id, { cursor_line, 0 })
+      api.nvim_win_set_cursor(kite_winid, { cursor_line, 0 })
     end
   end
 end

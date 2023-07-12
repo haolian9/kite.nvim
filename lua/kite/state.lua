@@ -1,6 +1,6 @@
+local dictlib = require("infra.dictlib")
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
-local dictlib = require("infra.dictlib")
 
 local formatter = require("kite.formatter")
 local scanner = require("kite.scanner")
