@@ -86,15 +86,13 @@ end
 ---@param to string
 ---@param from string?
 function M:trail_behind(to, from)
-  local function _heading()
+  local heading = (function()
     if from == nil then return "lost" end
     if to == from then return "stay" end
     if strlib.startswith(to, from) then return "go_inside" end
     if strlib.startswith(from, to) then return "go_outside" end
     return "lost"
-  end
-
-  local heading = _heading()
+  end)()
   if heading == "go_inside" then
     local outer, inner = from, to
     assert(outer)

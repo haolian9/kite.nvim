@@ -67,8 +67,7 @@ function M.fill_skeleton(winid, bufnr, root, resize)
   -- for cursor_line bounds check
   local entries_count = 0
 
-  -- buf
-  do
+  do -- buf
     bufrename(bufnr, string.format("kite://%s", vim.fs.basename(root)))
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     local entries = state:entries(root)
@@ -79,17 +78,16 @@ function M.fill_skeleton(winid, bufnr, root, resize)
     entries_count = #entries
   end
 
-  -- win
-  do
+  do -- win
     if resize then
+      --assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
       local width, height, row, col = M.geometry(root)
-      assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
       api.nvim_win_call(M.kite_anchor_winid(bufnr), function()
-        ---todo: this is a workaround for https://github.com/neovim/neovim/issues/24129
+        --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
         api.nvim_win_set_config(winid, { relative = "cursor", width = width, height = height, row = row, col = col })
+        ---todo: somehow after win_set_config, the previous set hl_ns has no effect.
+        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
       end)
-      ---todo: nvim_win_set_config will clear hl_ns, it seems.
-      api.nvim_win_set_hl_ns(winid, facts.hl_ns)
     end
     prefer.wo(winid, "winbar", root)
     local cursor_line

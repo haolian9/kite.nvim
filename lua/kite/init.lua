@@ -48,8 +48,7 @@ do
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 
     local kite_winid
-    -- win init
-    do
+    do -- win init
       local width, height, row, col = builder.geometry(root)
       -- stylua: ignore
       kite_winid = api.nvim_open_win(kite_bufnr, true, {
@@ -58,17 +57,14 @@ do
       })
     end
 
-    -- win setup
-    do
+    do -- win setup
       local wo = prefer.win(kite_winid)
       wo.number = false
       wo.relativenumber = false
       api.nvim_win_set_hl_ns(kite_winid, facts.hl_ns)
-      -- wo.winhl = 'NormalFloat:Normal'
     end
 
-    -- win cleanup
-    do
+    do -- win cleanup
       api.nvim_create_autocmd("WinLeave", {
         callback = function()
           if api.nvim_win_is_valid(kite_winid) then api.nvim_win_close(kite_winid, true) end
@@ -81,8 +77,8 @@ do
     end
 
     builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
-    -- update cursor only when kite fly from normal buffer
-    do
+
+    do -- update cursor only when kite fly from normal buffer
       if prefer.bo(bufnr, "buftype") ~= "" then return end
       local basename = vim.fs.basename(api.nvim_buf_get_name(bufnr))
       local cursor_line = state:entry_index(state:entries(root), formatter.file(basename), 1)
@@ -198,14 +194,13 @@ do
     win_open_cmd = win_open_cmd or "e"
 
     local move_step
-  -- stylua: ignore
-  if direction == 'next' then
-    move_step = function(i) return i + 1 end
-  elseif direction == 'prev' then
-    move_step = function(i) return i - 1 end
-  else
-    error('unknown direction')
-  end
+    if direction == "next" then
+      move_step = function(i) return i + 1 end
+    elseif direction == "prev" then
+      move_step = function(i) return i - 1 end
+    else
+      error("unknown direction")
+    end
 
     local root = vim.fn.expand("%:p:h")
 
