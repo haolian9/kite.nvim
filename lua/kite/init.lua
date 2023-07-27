@@ -12,12 +12,11 @@
 
 local M = {}
 
-local api = vim.api
-
 local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
 local fs = require("infra.fs")
+local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("kite")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -26,6 +25,8 @@ local builder = require("kite.builder")
 local facts = require("kite.facts")
 local formatter = require("kite.formatter")
 local state = require("kite.state")
+
+local api = vim.api
 
 do
   local function resolve_root(bufnr)
@@ -65,15 +66,8 @@ do
     end
 
     do -- win cleanup
-      api.nvim_create_autocmd("WinLeave", {
-        callback = function()
-          if api.nvim_win_is_valid(kite_winid) then api.nvim_win_close(kite_winid, true) end
-        end,
-      })
-      local function close_win() api.nvim_win_close(kite_winid, false) end
-      local bm = bufmap.wraps(kite_bufnr)
-      bm.n("q", close_win)
-      bm.n("<c-[>", close_win)
+      --intended to have no auto-close on winleave
+      handyclosekeys(kite_bufnr)
     end
 
     builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
