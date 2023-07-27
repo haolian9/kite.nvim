@@ -1,4 +1,5 @@
 local dictlib = require("infra.dictlib")
+local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
 
@@ -98,7 +99,7 @@ function M:trail_behind(to, from)
     assert(outer)
     -- add trail outer->inner
     if self:cursor_line(outer) == nil then
-      local inner_basename = vim.fs.basename(inner)
+      local inner_basename = fs.basename(inner)
       self:cursor_line(outer, self:entry_index(self:entries(outer), formatter.dir(inner_basename)))
     end
     if self:cursor_line(inner) then return end
@@ -109,7 +110,7 @@ function M:trail_behind(to, from)
     local outer, inner = to, from
     if self:cursor_line(outer) then return end
     -- add trail inner->outer
-    local inner_basename = vim.fs.basename(inner)
+    local inner_basename = fs.basename(inner)
     self:cursor_line(outer, self:entry_index(self:entries(outer), formatter.dir(inner_basename)))
     return
   end

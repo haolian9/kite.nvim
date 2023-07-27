@@ -14,13 +14,13 @@ local M = {}
 
 local api = vim.api
 
+local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
-local strlib = require("infra.strlib")
 
 local builder = require("kite.builder")
 local facts = require("kite.facts")
@@ -28,22 +28,22 @@ local formatter = require("kite.formatter")
 local state = require("kite.state")
 
 do
-  --determine the root for kite of a regular buffer
-  ---@param bufnr number
-  ---@return string
-  local function buf_root(bufnr)
-    local buftype = prefer.bo(bufnr, "buftype")
-    if not (buftype == "" or buftype == "help") then error(string.format("not a regular/help buffer: buftype=%s", buftype)) end
-    local name = api.nvim_buf_get_name(bufnr)
-    if strlib.find(name, "://") ~= nil then error("not a regular buffer: protocol://") end
-    return vim.fn.fnamemodify(name, ":p:h")
+  local function resolve_root(bufnr)
+    if prefer.bo(bufnr, "buftype") == "help" then return fs.parent(api.nvim_buf_get_name(bufnr)) end
+    return bufpath.dir(bufnr)
   end
 
-  -- show content of current buffer's parent dir in a floatwin
+  --show content of current buffer's parent dir in a floatwin
+  --NB: current buffer should be either buftype={"",help}
   function M.fly()
     local anchor_winid = api.nvim_get_current_win()
     local bufnr = api.nvim_win_get_buf(anchor_winid)
-    local root = buf_root(bufnr)
+    do
+      local buftype = prefer.bo(bufnr, "buftype")
+      assert(buftype == "" or buftype == "help")
+    end
+
+    local root = resolve_root(bufnr)
 
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 
@@ -79,8 +79,9 @@ do
     builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
 
     do -- update cursor only when kite fly from normal buffer
-      if prefer.bo(bufnr, "buftype") ~= "" then return end
-      local basename = vim.fs.basename(api.nvim_buf_get_name(bufnr))
+      local bufname = api.nvim_buf_get_name(bufnr)
+      if bufname == "" then return end
+      local basename = fs.basename(bufname)
       local cursor_line = state:entry_index(state:entries(root), formatter.file(basename), 1)
       api.nvim_win_set_cursor(kite_winid, { cursor_line, 0 })
     end
@@ -178,7 +179,7 @@ do
 
     local kite_win_id = api.nvim_get_current_win()
     local root = builder.kite_root(bufnr)
-    local parent = vim.fs.dirname(root)
+    local parent = fs.parent(root)
 
     do
       local cursor_line, _ = unpack(api.nvim_win_get_cursor(kite_win_id))

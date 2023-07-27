@@ -1,5 +1,4 @@
 local strlib = require("infra.strlib")
-local fs = require("infra.fs")
 
 --entity formatter
 local M = {
@@ -9,10 +8,10 @@ local M = {
   end,
   dir = function(basename)
     assert(not strlib.startswith(basename, "/"))
-    return string.format(" %s%s", basename, fs.sep)
+    return string.format(" %s%s", basename, "/")
   end,
   strip = function(formatted) return strlib.lstrip(formatted, " ") end,
-  is_dir = function(formatted) return strlib.endswith(formatted, fs.sep) end,
+  is_dir = function(formatted) return strlib.endswith(formatted, "/") end,
 }
 
 return M

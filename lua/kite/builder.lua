@@ -2,13 +2,14 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
+local fs = require("infra.fs")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
-local api = vim.api
-
 local facts = require("kite.facts")
 local state = require("kite.state")
+
+local api = vim.api
 
 function M.geometry(root)
   local width = math.max(30, math.min(state:widest(root) + 4, 50))
@@ -68,7 +69,7 @@ function M.fill_skeleton(winid, bufnr, root, resize)
   local entries_count = 0
 
   do -- buf
-    bufrename(bufnr, string.format("kite://%s", vim.fs.basename(root)))
+    bufrename(bufnr, string.format("kite://%s", fs.basename(root)))
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     local entries = state:entries(root)
     local bo = prefer.buf(bufnr)
