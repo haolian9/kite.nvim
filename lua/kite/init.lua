@@ -31,7 +31,7 @@ local api = vim.api
 do
   local function resolve_root(bufnr)
     if prefer.bo(bufnr, "buftype") == "help" then return fs.parent(api.nvim_buf_get_name(bufnr)) end
-    return bufpath.dir(bufnr)
+    return bufpath.dir(bufnr, true)
   end
 
   --show content of current buffer's parent dir in a floatwin
@@ -45,6 +45,7 @@ do
     end
 
     local root = resolve_root(bufnr)
+    if root == nil then return jelly.warn("cant resolve root dir of buf#%d", bufnr) end
 
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 

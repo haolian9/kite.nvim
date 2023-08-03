@@ -19,7 +19,7 @@ return function(dir)
     end, fs.iterdir(dir, resolve_symlink))
     iter = fn.slice(files, 1, facts.max_children + 1)
   end
-  local entries = fn.concrete(fn.map(function(fname, ftype)
+  local entries = fn.tolist(fn.mapn(function(fname, ftype)
     if ftype == "file" then
       return formatter.file(fname)
     elseif ftype == "directory" then
