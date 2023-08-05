@@ -2,6 +2,7 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
+local Ephemeral = require"infra.Ephemeral"
 local fs = require("infra.fs")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -27,11 +28,10 @@ function M.new_skeleton(root, anchor_winid)
   local bufnr
   -- buf init
   do
-    bufnr = api.nvim_create_buf(false, true)
+    bufnr = Ephemeral()
     api.nvim_buf_set_var(bufnr, facts.totem, true)
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     api.nvim_buf_set_var(bufnr, "kite_anchor_winid", anchor_winid)
-    prefer.bo(bufnr, "bufhidden", "wipe")
     prefer.bo(bufnr, "filetype", "kite")
   end
 
