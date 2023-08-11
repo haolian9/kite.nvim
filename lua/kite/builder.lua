@@ -2,7 +2,7 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
-local Ephemeral = require"infra.Ephemeral"
+local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -14,8 +14,7 @@ local api = vim.api
 
 function M.geometry(root)
   local width = math.max(30, math.min(state:widest(root) + 4, 50))
-  -- 1 for winbar
-  local height = math.min(math.floor(vim.go.lines * 0.9), math.max(2, #state:entries(root) + 1))
+  local height = math.min(math.floor(vim.go.lines * 0.9), math.max(1, #state:entries(root)))
   -- no cursor jumping
   local row = -(state:cursor_line(root) or 2)
   return width, height, row, 0
@@ -90,7 +89,6 @@ function M.fill_skeleton(winid, bufnr, root, resize)
         api.nvim_win_set_hl_ns(winid, facts.hl_ns)
       end)
     end
-    prefer.wo(winid, "winbar", root)
     local cursor_line
     do
       cursor_line = state:cursor_line(root)
