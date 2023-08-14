@@ -18,7 +18,6 @@ local ex = require("infra.ex")
 local fs = require("infra.fs")
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("kite")
-local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
 local builder = require("kite.builder")
@@ -34,29 +33,27 @@ do
     return bufpath.dir(bufnr, true)
   end
 
-  --show content of current buffer's parent dir in a floatwin
-  --NB: current buffer should be either buftype={"",help}
-  function M.fly()
+  --show the content of 'root' directory in a floatwin
+  --NB: the current buffer should be either buftype={"",help}
+  ---@param root? string @nil=bufpath.dir(current_buf)
+  function M.fly(root)
     local anchor_winid = api.nvim_get_current_win()
-    local bufnr = api.nvim_win_get_buf(anchor_winid)
-    do
-      local buftype = prefer.bo(bufnr, "buftype")
-      assert(buftype == "" or buftype == "help")
-    end
+    local anchor_bufnr -- exclusive with root
 
-    local root = resolve_root(bufnr)
-    if root == nil then return jelly.warn("cant resolve root dir of buf#%d", bufnr) end
+    if root == nil then
+      anchor_bufnr = api.nvim_win_get_buf(anchor_winid)
+      local buftype = prefer.bo(anchor_bufnr, "buftype")
+      assert(buftype == "" or buftype == "help")
+      root = resolve_root(anchor_bufnr)
+      if root == nil then return jelly.warn("cant resolve root dir of buf#%d", anchor_bufnr) end
+    end
 
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 
     local kite_winid
     do -- win init
       local width, height, row, col = builder.geometry(root)
-      -- stylua: ignore
-      kite_winid = api.nvim_open_win(kite_bufnr, true, {
-        relative = "cursor", style = "minimal", border = "single",
-        width = width, height = height, row = row, col = col,
-      })
+      kite_winid = api.nvim_open_win(kite_bufnr, true, { relative = "cursor", style = "minimal", border = "single", width = width, height = height, row = row, col = col })
     end
 
     do -- win setup
@@ -73,13 +70,14 @@ do
 
     builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
 
-    do -- update cursor only when kite fly from normal buffer
-      local bufname = api.nvim_buf_get_name(bufnr)
-      if bufname == "" then return end
-      local basename = fs.basename(bufname)
+    _ = (function() --- update cursor only when kite fly from normal buffer
+      if anchor_bufnr == nil then return end
+      local fpath = bufpath.file(anchor_bufnr)
+      if fpath == nil then return end
+      local basename = fs.basename(fpath)
       local cursor_line = state:entry_index(state:entries(root), formatter.file(basename), 1)
       api.nvim_win_set_cursor(kite_winid, { cursor_line, 0 })
-    end
+    end)()
   end
 end
 
@@ -96,7 +94,7 @@ function M.land(root)
   builder.fill_skeleton(kite_win_id, kite_bufnr, root, false)
 end
 
-do
+do --rhs
   local function is_landed_kite_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
   local function edit_file(kite_win_id, path, win_open_cmd)
