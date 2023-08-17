@@ -4,6 +4,7 @@ local M = {}
 local bufrename = require("infra.bufrename")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
+local handyclosekeys = require("infra.handyclosekeys")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
@@ -52,6 +53,8 @@ function M.new_skeleton(root, anchor_winid)
     bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
     bm.n("-", rhs_parent)
     bm.n("r", function() require("kite").rhs_refresh(bufnr) end)
+
+    handyclosekeys(bufnr)
   end
 
   return bufnr

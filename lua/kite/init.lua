@@ -16,7 +16,6 @@ local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
 local fs = require("infra.fs")
-local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
 
@@ -61,11 +60,7 @@ do
       wo.number = false
       wo.relativenumber = false
       api.nvim_win_set_hl_ns(kite_winid, facts.hl_ns)
-    end
-
-    do -- win cleanup
       --intended to have no auto-close on winleave
-      handyclosekeys(kite_bufnr)
     end
 
     builder.fill_skeleton(kite_winid, kite_bufnr, root, false)
