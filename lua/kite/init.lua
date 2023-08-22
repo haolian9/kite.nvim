@@ -50,12 +50,10 @@ do
     local kite_bufnr = builder.new_skeleton(root, anchor_winid)
 
     local kite_winid
-    do -- win init
-      local width, height, row, col = builder.geometry(root)
-      kite_winid = api.nvim_open_win(kite_bufnr, true, { relative = "cursor", style = "minimal", border = "single", width = width, height = height, row = row, col = col })
-    end
+    do
+      local winopts = dictlib.merged({ relative = "cursor", border = "single" }, builder.geometry(root))
+      kite_winid = api.nvim_open_win(kite_bufnr, true, winopts)
 
-    do -- win setup
       local wo = prefer.win(kite_winid)
       wo.number = false
       wo.relativenumber = false

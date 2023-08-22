@@ -2,9 +2,10 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
+local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
-local handyclosekeys = require("infra.handyclosekeys")
+local jelly = require("infra.jellyfish")("kite.builder", "debug")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
@@ -18,7 +19,7 @@ function M.geometry(root)
   local height = math.min(math.floor(vim.go.lines * 0.9), math.max(1, #state:entries(root)))
   -- no cursor jumping
   local row = -(state:cursor_line(root) or 2)
-  return width, height, row, 0
+  return { width = width, height = height, row = row, col = 0 }
 end
 
 ---@param root string @absolute path
@@ -28,7 +29,7 @@ function M.new_skeleton(root, anchor_winid)
   local bufnr
   -- buf init
   do
-    bufnr = Ephemeral()
+    bufnr = Ephemeral({ handyclose = true })
     api.nvim_buf_set_var(bufnr, facts.totem, true)
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     api.nvim_buf_set_var(bufnr, "kite_anchor_winid", anchor_winid)
@@ -53,8 +54,6 @@ function M.new_skeleton(root, anchor_winid)
     bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
     bm.n("-", rhs_parent)
     bm.n("r", function() require("kite").rhs_refresh(bufnr) end)
-
-    handyclosekeys(bufnr)
   end
 
   return bufnr
@@ -83,11 +82,10 @@ function M.fill_skeleton(winid, bufnr, root, resize)
 
   do -- win
     if resize then
-      --assert(api.nvim_win_get_config(winid).relative ~= "", "should be floating window")
-      local width, height, row, col = M.geometry(root)
+      local winopts = dictlib.merged({ relative = "cursor" }, M.geometry(root))
       api.nvim_win_call(M.kite_anchor_winid(bufnr), function()
         --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
-        api.nvim_win_set_config(winid, { relative = "cursor", width = width, height = height, row = row, col = col })
+        api.nvim_win_set_config(winid, winopts)
         ---todo: somehow after win_set_config, the previous set hl_ns has no effect.
         api.nvim_win_set_hl_ns(winid, facts.hl_ns)
       end)
