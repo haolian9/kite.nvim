@@ -1,6 +1,5 @@
 local fn = require("infra.fn")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("kite.scanner")
 
 local facts = require("kite.facts")
 local formatter = require("kite.formatter")

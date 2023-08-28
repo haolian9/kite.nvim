@@ -5,7 +5,6 @@ local bufrename = require("infra.bufrename")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("kite.builder", "debug")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 
@@ -83,12 +82,8 @@ function M.fill_skeleton(winid, bufnr, root, resize)
   do -- win
     if resize then
       local winopts = dictlib.merged({ relative = "cursor" }, M.geometry(root))
-      api.nvim_win_call(M.kite_anchor_winid(bufnr), function()
-        --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
-        api.nvim_win_set_config(winid, winopts)
-        ---todo: somehow after win_set_config, the previous set hl_ns has no effect.
-        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
-      end)
+      --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
+      api.nvim_win_call(M.kite_anchor_winid(bufnr), function() api.nvim_win_set_config(winid, winopts) end)
     end
     local cursor_line
     do

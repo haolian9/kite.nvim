@@ -15,12 +15,12 @@ local M = {}
 local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
+local rifts = require("infra.rifts")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
 
 local builder = require("kite.builder")
-local facts = require("kite.facts")
 local formatter = require("kite.formatter")
 local state = require("kite.state")
 
@@ -57,7 +57,7 @@ do
       local wo = prefer.win(kite_winid)
       wo.number = false
       wo.relativenumber = false
-      api.nvim_win_set_hl_ns(kite_winid, facts.hl_ns)
+      api.nvim_win_set_hl_ns(kite_winid, rifts.ns)
       --intended to have no auto-close on winleave
     end
 

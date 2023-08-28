@@ -110,7 +110,7 @@ function M:trail_behind(to, from)
     local outer, inner = to, from
     if self:cursor_line(outer) then return end
     -- add trail inner->outer
-    local inner_basename = fs.basename(inner)
+    local inner_basename = fs.basename(assert(inner))
     self:cursor_line(outer, self:entry_index(self:entries(outer), formatter.dir(inner_basename)))
     return
   end
