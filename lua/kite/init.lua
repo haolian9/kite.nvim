@@ -41,8 +41,6 @@ do
 
     if root == nil then
       anchor_bufnr = api.nvim_win_get_buf(anchor_winid)
-      local buftype = prefer.bo(anchor_bufnr, "buftype")
-      assert(buftype == "" or buftype == "help")
       root = resolve_root(anchor_bufnr)
       if root == nil then return jelly.warn("cant resolve root dir of buf#%d", anchor_bufnr) end
     end
