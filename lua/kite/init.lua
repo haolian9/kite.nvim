@@ -15,10 +15,10 @@ local M = {}
 local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
-local rifts = require("infra.rifts")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
+local rifts = require("infra.rifts")
 
 local builder = require("kite.builder")
 local formatter = require("kite.formatter")
@@ -222,6 +222,12 @@ do --rhs
 
     state:forget_entries(root)
     cd(kite_win_id, bufnr, root)
+  end
+
+  function M.rhs_bufdir_stats(bufnr)
+    local root = builder.kite_root(bufnr)
+    local entries = state:entries(root)
+    jelly.info('"%s" %s entries', root, #entries)
   end
 end
 

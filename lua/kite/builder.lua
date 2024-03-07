@@ -53,6 +53,7 @@ function M.new_skeleton(root, anchor_winid)
     bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
     bm.n("-", rhs_parent)
     bm.n("r", function() require("kite").rhs_refresh(bufnr) end)
+    bm.n("<c-g>", function() require("kite").rhs_bufdir_stats(bufnr) end)
   end
 
   return bufnr
