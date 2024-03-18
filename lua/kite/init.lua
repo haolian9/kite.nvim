@@ -50,7 +50,7 @@ do
     local kite_winid
     do
       local winopts = dictlib.merged({ relative = "cursor", border = "single" }, builder.geometry(root))
-      kite_winid = api.nvim_open_win(kite_bufnr, true, winopts)
+      kite_winid = rifts.open.win(kite_bufnr, true, winopts)
 
       local wo = prefer.win(kite_winid)
       wo.number = false
