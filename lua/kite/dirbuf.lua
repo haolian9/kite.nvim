@@ -1,4 +1,3 @@
---ui builder
 local M = {}
 
 local bufrename = require("infra.bufrename")
@@ -14,17 +13,17 @@ local state = require("kite.state")
 local api = vim.api
 
 function M.geometry(root)
-  local width = math.max(30, math.min(state:widest(root) + 4, 50))
-  local height = math.min(math.floor(vim.go.lines * 0.9), math.max(1, #state:entries(root)))
+  local width = math.max(30, math.min(state.widest(root) + 4, 50))
+  local height = math.min(math.floor(vim.go.lines * 0.9), math.max(1, #state.entries(root)))
   -- no cursor jumping
-  local row = -(state:cursor_line(root) or 2)
+  local row = -(state.cursor_line(root) or 2)
   return { width = width, height = height, row = row, col = 0 }
 end
 
 ---@param root string @absolute path
 ---@param anchor_winid integer
 ---@return integer @bufnr
-function M.new_skeleton(root, anchor_winid)
+function M.new(root, anchor_winid)
   local bufnr
   -- buf init
   do
@@ -63,7 +62,7 @@ end
 ---@param bufnr number
 ---@param root string @absolute path
 ---@param resize boolean
-function M.fill_skeleton(winid, bufnr, root, resize)
+function M.refresh(winid, bufnr, root, resize)
   assert(winid ~= nil and bufnr ~= nil and root ~= nil and resize ~= nil)
 
   -- for cursor_line bounds check
@@ -72,7 +71,7 @@ function M.fill_skeleton(winid, bufnr, root, resize)
   do -- buf
     bufrename(bufnr, string.format("kite://%s", fs.basename(root)))
     api.nvim_buf_set_var(bufnr, "kite_root", root)
-    local entries = state:entries(root)
+    local entries = state.entries(root)
     local bo = prefer.buf(bufnr)
     bo.modifiable = true
     api.nvim_buf_set_lines(bufnr, 0, -1, false, entries)
@@ -88,7 +87,7 @@ function M.fill_skeleton(winid, bufnr, root, resize)
     end
     local cursor_line
     do
-      cursor_line = state:cursor_line(root)
+      cursor_line = state.cursor_line(root)
       if cursor_line == nil then
         -- fresh load
         cursor_line = 1

@@ -1,53 +1,58 @@
 local dictlib = require("infra.dictlib")
+local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
 
-local formatter = require("kite.formatter")
-local scanner = require("kite.scanner")
+local entfmt = require("kite.entfmt")
+local scandir = require("kite.scandir")
 
-local M = {
-  -- {root: {entries: [formated-path], cursor_line: 0-based-int, widest: #entry}}
+local M = {}
+
+local cache = {}
+do
+  ---@private
+  ---{root: {entries: [formatted-path], cursor_line: 0-based-int, widest: max(#entry)}}
   ---@type {[string]: {entries: string[]?, cursor_line: number?, widest: number?}}
-  cache = dictlib.CappedDict(512),
-}
+  cache.dict = dictlib.CappedDict(512)
 
----@param root string
----@param key string
-local function _get(root, key)
-  local cache = M.cache[root]
-  if cache == nil then return end
-  return cache[key]
-end
+  ---@param root string
+  ---@param key 'entries'|'cursor_line'|'widest'
+  function cache:get(root, key)
+    local record = self.dict[root]
+    if record == nil then return end
+    return record[key]
+  end
 
----@param root string
----@param key string
----@param val string[]|number?
-local function _set(root, key, val)
-  if M.cache[root] == nil then M.cache[root] = {} end
-  M.cache[root][key] = val
+  ---@param root string
+  ---@param key string
+  ---@param val string[]|number?
+  function cache:set(root, key, val)
+    if self.dict[root] == nil then self.dict[root] = {} end
+    self.dict[root][key] = val
+  end
 end
 
 ---@param root string
 ---@param newval number?
 ---@return number?
-function M:cursor_line(root, newval)
+function M.cursor_line(root, newval)
   ---@diagnostic disable-next-line
-  if newval == nil then return _get(root, "cursor_line") end
+  if newval == nil then return cache:get(root, "cursor_line") end
   assert(newval > 0)
-  _set(root, "cursor_line", newval)
+  cache:set(root, "cursor_line", newval)
 end
 
-function M:forget_entries(root) _set(root, "entries", nil) end
+function M.forget_entries(root) cache:set(root, "entries", nil) end
 
 ---@return string[]
-function M:entries(root)
+function M.entries(root)
   assert(root ~= nil)
-  local entries = _get(root, "entries")
+  local entries = cache:get(root, "entries")
 
   if entries == nil then
-    entries = scanner(root)
-    _set(root, "entries", entries)
+    entries = scandir(root)
+    cache:set(root, "entries", entries)
   end
 
   ---@diagnostic disable-next-line
@@ -57,16 +62,12 @@ end
 --get the max entry-width of the root
 ---@param root string
 ---@return number
-function M:widest(root)
-  local cache = self.cache[root]
-  if cache ~= nil and cache.widest ~= nil then return cache.widest end
-  local entries = self:entries(root)
-  local widest = 0
-  for _, entry in ipairs(entries) do
-    local width = #entry
-    if width > widest then widest = width end
-  end
-  self.cache[root].widest = widest
+function M.widest(root)
+  local known = cache:get(root, "widest")
+  if known ~= nil then return known end
+
+  local widest = assert(fn.max(fn.map(string.len, M.entries(root))))
+  cache:set(root, "widest", widest)
   return widest
 end
 
@@ -75,7 +76,7 @@ end
 ---@param formatted string
 ---@param default ?number
 ---@return number
-function M:entry_index(entries, formatted, default)
+function M.entry_index(entries, formatted, default)
   for key, val in ipairs(entries) do
     if val == formatted then return key end
   end
@@ -86,7 +87,7 @@ end
 
 ---@param to string
 ---@param from string?
-function M:trail_behind(to, from)
+function M.trail_behind(to, from)
   local heading = (function()
     if from == nil then return "lost" end
     if to == from then return "stay" end
@@ -94,33 +95,33 @@ function M:trail_behind(to, from)
     if strlib.startswith(from, to) then return "go_outside" end
     return "lost"
   end)()
+
   if heading == "go_inside" then
     local outer, inner = from, to
     assert(outer)
     -- add trail outer->inner
-    if self:cursor_line(outer) == nil then
+    if M.cursor_line(outer) == nil then
       local inner_basename = fs.basename(inner)
-      self:cursor_line(outer, self:entry_index(self:entries(outer), formatter.dir(inner_basename)))
+      M.cursor_line(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
     end
-    if self:cursor_line(inner) then return end
-    self:cursor_line(inner, self:cursor_line(inner))
-    return
-  end
-  if heading == "go_outside" then
+    if M.cursor_line(inner) then return end
+    M.cursor_line(inner, M.cursor_line(inner))
+  elseif heading == "go_outside" then
     local outer, inner = to, from
-    if self:cursor_line(outer) then return end
+    if M.cursor_line(outer) then return end
     -- add trail inner->outer
     local inner_basename = fs.basename(assert(inner))
-    self:cursor_line(outer, self:entry_index(self:entries(outer), formatter.dir(inner_basename)))
-    return
+    M.cursor_line(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
+  elseif heading == "lost" then
+    if M.cursor_line(to) then return end
+    M.cursor_line(to, 1)
+  elseif heading == "stay" then
+    --nop
+  else
+    error("unable to resolve trail")
   end
-  if heading == "lost" then
-    if self:cursor_line(to) then return end
-    self:cursor_line(to, 1)
-    return
-  end
-  if heading == "stay" then return end
-  error("unable to resolve trail")
 end
+
+function M.clear_cache() cache.dict = dictlib.CappedDict(512) end
 
 return M

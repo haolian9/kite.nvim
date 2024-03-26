@@ -1,8 +1,8 @@
 local fn = require("infra.fn")
 local fs = require("infra.fs")
 
+local entfmt = require("kite.entfmt")
 local facts = require("kite.facts")
-local formatter = require("kite.formatter")
 
 local function filter_ent(fname, ftype)
   local _ = fname
@@ -13,9 +13,9 @@ end
 
 local function format_ent(fname, ftype)
   if ftype == "file" then
-    return formatter.file(fname)
+    return entfmt.file(fname)
   elseif ftype == "directory" then
-    return formatter.dir(fname)
+    return entfmt.dir(fname)
   else
     error("unexpected file type: " .. ftype)
   end
