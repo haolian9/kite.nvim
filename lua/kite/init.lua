@@ -91,9 +91,9 @@ do --rhs
   local function edit_file(kite_win_id, path, win_open_cmd)
     assert(win_open_cmd)
 
-    -- close kite win when
-    -- * kite buffer may not be showed in a window
-    -- * landed kite window must not be closed
+    ---no closing kite win when the kite buffer is
+    ---* not bound to any window
+    ---* bound to a landed window
     if kite_win_id and not is_landed_kite_win(kite_win_id) then api.nvim_win_close(kite_win_id, false) end
 
     ex(win_open_cmd, path)
