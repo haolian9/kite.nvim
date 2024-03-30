@@ -91,6 +91,9 @@ function M.refresh(winid, bufnr, root, resize)
       if cursor_line == nil then
         -- fresh load
         cursor_line = 1
+      elseif entries_count == 0 then
+        -- empty dir
+        cursor_line = 1
       elseif cursor_line > entries_count then
         -- last entry has been removed
         cursor_line = entries_count

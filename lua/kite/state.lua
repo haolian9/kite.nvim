@@ -66,7 +66,7 @@ function M.widest(root)
   local known = cache:get(root, "widest")
   if known ~= nil then return known end
 
-  local widest = assert(fn.max(fn.map(string.len, M.entries(root))))
+  local widest = fn.max(fn.map(string.len, M.entries(root))) or 0
   cache:set(root, "widest", widest)
   return widest
 end
