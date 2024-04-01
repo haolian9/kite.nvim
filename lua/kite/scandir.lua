@@ -6,9 +6,8 @@ local facts = require("kite.facts")
 
 local function filter_ent(fname, ftype)
   local _ = fname
-  if not (ftype == "file" or ftype == "directory") then return false end
   -- maybe: respects .gitignore
-  return true
+  return ftype == "file" or ftype == "directory"
 end
 
 local function format_ent(fname, ftype)
@@ -25,7 +24,7 @@ end
 ---@return string[]
 return function(dir)
   local iter
-  iter = fs.iterdir(dir, true)
+  iter = fs.iterdir(dir)
   iter = fn.filtern(filter_ent, iter)
   iter = fn.slice(iter, 1, facts.max_children + 1)
   iter = fn.mapn(format_ent, iter)
