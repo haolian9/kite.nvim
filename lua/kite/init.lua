@@ -12,6 +12,7 @@
 
 local M = {}
 
+local buflines = require("infra.buflines")
 local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
@@ -116,10 +117,11 @@ do --rhs
     local root = dirbuf.kite_root(bufnr)
 
     local cursor_line, _ = unpack(api.nvim_win_get_cursor(kite_win_id))
+
     local fname
     do
-      local lines = api.nvim_buf_get_lines(bufnr, cursor_line - 1, cursor_line, true)
-      fname = entfmt.strip(lines[1])
+      local lnum = cursor_line - 1
+      fname = entfmt.strip(buflines.line(bufnr, lnum))
       if fname == "" then return jelly.warn("no file found at the cursor line") end
     end
     local path_to = fs.joinpath(root, fname)
@@ -143,10 +145,11 @@ do --rhs
     local root = dirbuf.kite_root(bufnr)
 
     local cursor_line, _ = unpack(api.nvim_win_get_cursor(kite_win_id))
+
     local fname
     do
-      local lines = api.nvim_buf_get_lines(bufnr, cursor_line - 1, cursor_line, true)
-      fname = entfmt.strip(lines[1])
+      local lnum = cursor_line - 1
+      fname = entfmt.strip(buflines.line(bufnr, lnum))
       if fname == "" then return end
     end
 

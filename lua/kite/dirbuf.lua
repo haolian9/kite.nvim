@@ -1,5 +1,6 @@
 local M = {}
 
+local buflines = require("infra.buflines")
 local bufrename = require("infra.bufrename")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
@@ -73,8 +74,9 @@ function M.refresh(winid, bufnr, root, resize)
     api.nvim_buf_set_var(bufnr, "kite_root", root)
     local entries = state.entries(root)
     local bo = prefer.buf(bufnr)
+    --todo: use ctx.modifiable instead?
     bo.modifiable = true
-    api.nvim_buf_set_lines(bufnr, 0, -1, false, entries)
+    buflines.replaces_all(bufnr, entries)
     bo.modifiable = false
     entries_count = #entries
   end
