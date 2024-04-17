@@ -2,6 +2,7 @@ local M = {}
 
 local buflines = require("infra.buflines")
 local bufrename = require("infra.bufrename")
+local ctx = require("infra.ctx")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
@@ -85,7 +86,7 @@ function M.refresh(winid, bufnr, root, resize)
     if resize then
       local winopts = dictlib.merged({ relative = "cursor" }, M.geometry(root))
       --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
-      api.nvim_win_call(M.kite_anchor_winid(bufnr), function() api.nvim_win_set_config(winid, winopts) end)
+      ctx.win(M.kite_anchor_winid(bufnr), function() api.nvim_win_set_config(winid, winopts) end)
     end
     local cursor_line
     do
