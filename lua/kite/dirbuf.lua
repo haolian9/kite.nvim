@@ -8,6 +8,7 @@ local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
+local wincursor = require("infra.wincursor")
 
 local facts = require("kite.facts")
 local state = require("kite.state")
@@ -18,7 +19,7 @@ function M.geometry(root)
   local width = math.max(30, math.min(state.widest(root) + 4, 50))
   local height = math.min(math.floor(vim.go.lines * 0.9), math.max(1, #state.entries(root)))
   -- no cursor jumping
-  local row = -(state.cursor_line(root) or 2)
+  local row = -(state.cursor_row(root) or 2)
   return { width = width, height = height, row = row, col = 0 }
 end
 
@@ -67,7 +68,7 @@ end
 function M.refresh(winid, bufnr, root, resize)
   assert(winid ~= nil and bufnr ~= nil and root ~= nil and resize ~= nil)
 
-  -- for cursor_line bounds check
+  -- for cursor_row bounds check
   local entries_count = 0
 
   do -- buf
@@ -88,21 +89,21 @@ function M.refresh(winid, bufnr, root, resize)
       --win_set_config needs an anchor: https://github.com/neovim/neovim/issues/24129
       ctx.win(M.kite_anchor_winid(bufnr), function() api.nvim_win_set_config(winid, winopts) end)
     end
-    local cursor_line
+    local cursor_row
     do
-      cursor_line = state.cursor_line(root)
-      if cursor_line == nil then
+      cursor_row = state.cursor_row(root)
+      if cursor_row == nil then
         -- fresh load
-        cursor_line = 1
+        cursor_row = 1
       elseif entries_count == 0 then
         -- empty dir
-        cursor_line = 1
-      elseif cursor_line > entries_count then
+        cursor_row = 1
+      elseif cursor_row > entries_count then
         -- last entry has been removed
-        cursor_line = entries_count
+        cursor_row = entries_count
       end
     end
-    api.nvim_win_set_cursor(winid, { cursor_line, 0 })
+    wincursor.g1(winid, cursor_row, 0)
   end
 end
 

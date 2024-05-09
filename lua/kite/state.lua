@@ -12,12 +12,12 @@ local M = {}
 local cache = {}
 do
   ---@private
-  ---{root: {entries: [formatted-path], cursor_line: 0-based-int, widest: max(#entry)}}
-  ---@type {[string]: {entries: string[]?, cursor_line: number?, widest: number?}}
+  ---{root: {entries: [formatted-path], cursor_row: 0-based-int, widest: max(#entry)}}
+  ---@type {[string]: {entries: string[]?, cursor_row: number?, widest: number?}}
   cache.dict = dictlib.CappedDict(512)
 
   ---@param root string
-  ---@param key 'entries'|'cursor_line'|'widest'
+  ---@param key 'entries'|'cursor_row'|'widest'
   function cache:get(root, key)
     local record = self.dict[root]
     if record == nil then return end
@@ -36,11 +36,11 @@ end
 ---@param root string
 ---@param newval number?
 ---@return number?
-function M.cursor_line(root, newval)
+function M.cursor_row(root, newval)
   ---@diagnostic disable-next-line
-  if newval == nil then return cache:get(root, "cursor_line") end
+  if newval == nil then return cache:get(root, "cursor_row") end
   assert(newval > 0)
-  cache:set(root, "cursor_line", newval)
+  cache:set(root, "cursor_row", newval)
 end
 
 function M.forget_entries(root) cache:set(root, "entries", nil) end
@@ -100,21 +100,21 @@ function M.trail_behind(to, from)
     local outer, inner = from, to
     assert(outer)
     -- add trail outer->inner
-    if M.cursor_line(outer) == nil then
+    if M.cursor_row(outer) == nil then
       local inner_basename = fs.basename(inner)
-      M.cursor_line(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
+      M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
     end
-    if M.cursor_line(inner) then return end
-    M.cursor_line(inner, M.cursor_line(inner))
+    if M.cursor_row(inner) then return end
+    M.cursor_row(inner, M.cursor_row(inner))
   elseif heading == "go_outside" then
     local outer, inner = to, from
-    if M.cursor_line(outer) then return end
+    if M.cursor_row(outer) then return end
     -- add trail inner->outer
     local inner_basename = fs.basename(assert(inner))
-    M.cursor_line(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
+    M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
   elseif heading == "lost" then
-    if M.cursor_line(to) then return end
-    M.cursor_line(to, 1)
+    if M.cursor_row(to) then return end
+    M.cursor_row(to, 1)
   elseif heading == "stay" then
     --nop
   else
