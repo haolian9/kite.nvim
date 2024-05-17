@@ -19,7 +19,7 @@ https://github.com/haolian9/zongzi/assets/6236829/1ce73de9-b494-4677-ac43-c0852a
 
 ## prerequisites
 * linux
-* nvim 0.8.*
+* nvim 0.10.*
 * haolian9/infra.nvim
 
 ## usage
