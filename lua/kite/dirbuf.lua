@@ -39,18 +39,19 @@ function M.new(root, anchor_winid)
 
   -- buf keymap
   do
-    local function rhs_open(open_cmd)
-      return function() require("kite").rhs_open(bufnr, open_cmd) end
+    ---@param open_mode? infra.bufopen.Mode
+    local function rhs_open(open_mode)
+      return function() require("kite").rhs_open(bufnr, open_mode) end
     end
     local function rhs_parent() return require("kite").rhs_parent(bufnr) end
     local bm = bufmap.wraps(bufnr)
-    bm.n("<cr>", rhs_open("e"))
-    bm.n("gf", rhs_open("e"))
-    bm.n("i", rhs_open("e"))
-    bm.n("o", rhs_open("sp"))
-    bm.n("t", rhs_open("tabe"))
-    bm.n("v", rhs_open("vs"))
-    bm.n("<c-/>", rhs_open("vs"))
+    bm.n("<cr>", rhs_open("inplace"))
+    bm.n("gf", rhs_open("inplace"))
+    bm.n("i", rhs_open("inplace"))
+    bm.n("o", rhs_open("below"))
+    bm.n("t", rhs_open("tab"))
+    bm.n("v", rhs_open("right"))
+    bm.n("<c-/>", rhs_open("right"))
     bm.n("h", rhs_parent)
     bm.n("l", function() require("kite").rhs_open_dir(bufnr) end)
     bm.n("-", rhs_parent)

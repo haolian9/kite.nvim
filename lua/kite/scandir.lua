@@ -1,5 +1,5 @@
-local fn = require("infra.fn")
 local fs = require("infra.fs")
+local itertools = require("infra.itertools")
 
 local entfmt = require("kite.entfmt")
 local facts = require("kite.facts")
@@ -25,9 +25,9 @@ end
 return function(dir)
   local iter
   iter = fs.iterdir(dir)
-  iter = fn.filtern(filter_ent, iter)
-  iter = fn.slice(iter, 1, facts.max_children + 1)
-  iter = fn.mapn(format_ent, iter)
+  iter = itertools.filtern(filter_ent, iter)
+  iter = itertools.slice(iter, 1, facts.max_children + 1)
+  iter = itertools.mapn(format_ent, iter)
 
-  return fn.tolist(iter)
+  return itertools.tolist(iter)
 end

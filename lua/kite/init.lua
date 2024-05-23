@@ -13,14 +13,16 @@
 local M = {}
 
 local buflines = require("infra.buflines")
+local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
-local wincursor = require("infra.wincursor")
 local dictlib = require("infra.dictlib")
 local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
+local wincursor = require("infra.wincursor")
+local winsplit = require("infra.winsplit")
 
 local dirbuf = require("kite.dirbuf")
 local entfmt = require("kite.entfmt")
@@ -90,17 +92,21 @@ end
 do --rhs
   local function is_landed_kite_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
-  local function edit_file(kite_winid, path, win_open_cmd)
-    assert(win_open_cmd)
-
+  ---@param kite_winid? integer
+  ---@param path string
+  ---@param open_mode infra.bufopen.Mode
+  local function edit_file(kite_winid, path, open_mode)
     ---no closing kite win when the kite buffer is
     ---* not bound to any window
     ---* bound to a landed window
     if kite_winid and not is_landed_kite_win(kite_winid) then api.nvim_win_close(kite_winid, false) end
 
-    ex(win_open_cmd, path)
+    bufopen(open_mode, path)
   end
 
+  ---@param winid integer
+  ---@param kite_bufnr integer
+  ---@param root string
   local function cd(winid, kite_bufnr, root)
     local path_from = dirbuf.kite_root(kite_bufnr)
     state.trail_behind(root, path_from)
@@ -110,9 +116,10 @@ do --rhs
   end
 
   -- open child file or dir selected from kite buffer
-  function M.rhs_open(bufnr, win_open_cmd)
+  ---@param bufnr integer
+  ---@param open_mode? infra.bufopen.Mode
+  function M.rhs_open(bufnr, open_mode)
     bufnr = bufnr or api.nvim_get_current_buf()
-    win_open_cmd = win_open_cmd or "e"
 
     local kite_winid = api.nvim_get_current_win()
     local root = dirbuf.kite_root(bufnr)
@@ -130,8 +137,9 @@ do --rhs
       jelly.debug("kite cd %s", path_to)
       cd(kite_winid, bufnr, path_to)
     else
-      jelly.debug("%s %s", win_open_cmd, path_to)
-      edit_file(kite_winid, path_to, win_open_cmd)
+      open_mode = open_mode or "inplace"
+      jelly.debug("%s %s", open_mode, path_to)
+      edit_file(kite_winid, path_to, open_mode)
     end
   end
 

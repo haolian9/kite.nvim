@@ -1,6 +1,6 @@
 local dictlib = require("infra.dictlib")
-local fn = require("infra.fn")
 local fs = require("infra.fs")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
 
@@ -66,7 +66,7 @@ function M.widest(root)
   local known = cache:get(root, "widest")
   if known ~= nil then return known end
 
-  local widest = fn.max(fn.map(string.len, M.entries(root))) or 0
+  local widest = itertools.max(itertools.map(string.len, M.entries(root))) or 0
   cache:set(root, "widest", widest)
   return widest
 end
