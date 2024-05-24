@@ -16,13 +16,12 @@ local buflines = require("infra.buflines")
 local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
 local dictlib = require("infra.dictlib")
-local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
+local repeats = require("infra.repeats")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
-local winsplit = require("infra.winsplit")
 
 local dirbuf = require("kite.dirbuf")
 local entfmt = require("kite.entfmt")
@@ -177,9 +176,13 @@ do --rhs
   end
 
   -- made for operations which require a headless kite
-  function M.rhs_open_sibling_file(direction, win_open_cmd)
+  ---@param direction 'prev'|'next'
+  ---@param open_mode infra.bufopen.Mode
+  function M.rhs_open_sibling_file(direction, open_mode)
     direction = direction or "next"
-    win_open_cmd = win_open_cmd or "e"
+    open_mode = open_mode or "inplace"
+
+    repeats.remember_paren(function() M.rhs_open_sibling_file("next", "inplace") end, function() M.rhs_open_sibling_file("prev", "inplace") end)
 
     local move_step
     if direction == "next" then
@@ -214,7 +217,7 @@ do --rhs
     end
 
     state.cursor_row(root, sibling_cursor_row)
-    edit_file(nil, sibling_fpath, win_open_cmd)
+    edit_file(nil, sibling_fpath, open_mode)
   end
 
   function M.rhs_refresh(bufnr)
