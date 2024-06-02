@@ -177,7 +177,7 @@ do --rhs
 
   -- made for operations which require a headless kite
   ---@param direction 'prev'|'next'
-  ---@param open_mode infra.bufopen.Mode
+  ---@param open_mode? infra.bufopen.Mode
   function M.rhs_open_sibling_file(direction, open_mode)
     direction = direction or "next"
     open_mode = open_mode or "inplace"
