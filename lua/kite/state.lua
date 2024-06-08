@@ -13,7 +13,7 @@ local cache = {}
 do
   ---@private
   ---{root: {entries: [formatted-path], cursor_row: 0-based-int, widest: max(#entry)}}
-  ---@type {[string]: {entries: string[]?, cursor_row: number?, widest: number?}}
+  ---@type {[string]: {entries:string[]?, cursor_row:number?, widest:number?}}
   cache.dict = dictlib.CappedDict(512)
 
   ---@param root string

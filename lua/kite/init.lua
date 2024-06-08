@@ -12,20 +12,17 @@
 
 local M = {}
 
-local buflines = require("infra.buflines")
 local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
-local dictlib = require("infra.dictlib")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
 local prefer = require("infra.prefer")
 local repeats = require("infra.repeats")
-local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
-local dirbuf = require("kite.dirbuf")
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
+local UI = require("kite.UI")
 
 local api = vim.api
 
@@ -48,21 +45,7 @@ do
       if root == nil then return jelly.warn("cant resolve root dir of buf#%d", anchor_bufnr) end
     end
 
-    local kite_bufnr = dirbuf.new(root, anchor_winid)
-
-    local kite_winid
-    do
-      local winopts = dictlib.merged({ relative = "cursor", border = "single" }, dirbuf.geometry(root))
-      kite_winid = rifts.open.win(kite_bufnr, true, winopts)
-
-      local wo = prefer.win(kite_winid)
-      wo.number = false
-      wo.relativenumber = false
-      api.nvim_win_set_hl_ns(kite_winid, rifts.ns)
-      --intended to have no auto-close on winleave
-    end
-
-    dirbuf.refresh(kite_winid, kite_bufnr, root, false)
+    local kite_winid = UI(root)
 
     _ = (function() --- update cursor only when kite fly from normal buffer
       if anchor_bufnr == nil then return end
@@ -81,160 +64,55 @@ function M.land(root)
   if root == nil then root = vim.fn.expand("%:p:h") end
   local anchor_winid = api.nvim_get_current_win()
 
-  local kite_bufnr = dirbuf.new(root, anchor_winid)
-  local kite_winid = api.nvim_get_current_win()
-  api.nvim_win_set_buf(kite_winid, kite_bufnr)
-
-  dirbuf.refresh(kite_winid, kite_bufnr, root, false)
+  UI(root, function(bufnr)
+    local winid = api.nvim_get_current_win()
+    api.nvim_win_set_buf(winid, bufnr)
+    return winid
+  end)
 end
 
-do --rhs
-  local function is_landed_kite_win(winid) return api.nvim_win_get_config(winid).relative == "" end
+-- made for operations which require a headless kite
+---@param direction 'prev'|'next'
+---@param open_mode? infra.bufopen.Mode
+function M.open_sibling_file(direction, open_mode)
+  direction = direction or "next"
+  open_mode = open_mode or "inplace"
 
-  ---@param kite_winid? integer
-  ---@param path string
-  ---@param open_mode infra.bufopen.Mode
-  local function edit_file(kite_winid, path, open_mode)
-    ---no closing kite win when the kite buffer is
-    ---* not bound to any window
-    ---* bound to a landed window
-    if kite_winid and not is_landed_kite_win(kite_winid) then api.nvim_win_close(kite_winid, false) end
+  repeats.remember_paren(function() M.rhs_open_sibling_file("next", "inplace") end, function() M.rhs_open_sibling_file("prev", "inplace") end)
 
-    bufopen(open_mode, path)
+  local move_step
+  if direction == "next" then
+    move_step = function(i) return i + 1 end
+  elseif direction == "prev" then
+    move_step = function(i) return i - 1 end
+  else
+    error("unknown direction")
   end
 
-  ---@param winid integer
-  ---@param kite_bufnr integer
-  ---@param root string
-  local function cd(winid, kite_bufnr, root)
-    local path_from = dirbuf.kite_root(kite_bufnr)
-    state.trail_behind(root, path_from)
+  local root = vim.fn.expand("%:p:h")
 
-    local need_resize = not is_landed_kite_win(winid)
-    dirbuf.refresh(winid, kite_bufnr, root, need_resize)
-  end
-
-  -- open child file or dir selected from kite buffer
-  ---@param bufnr integer
-  ---@param open_mode? infra.bufopen.Mode
-  function M.rhs_open(bufnr, open_mode)
-    bufnr = bufnr or api.nvim_get_current_buf()
-
-    local kite_winid = api.nvim_get_current_win()
-    local root = dirbuf.kite_root(bufnr)
-
-    local cursor = wincursor.position(kite_winid)
-
-    local fname = entfmt.strip(buflines.line(bufnr, cursor.lnum))
-    if fname == "" then return jelly.warn("no file found at the cursor line") end
-
-    local path_to = fs.joinpath(root, fname)
-
-    state.cursor_row(root, cursor.row)
-
-    if entfmt.is_dir(fname) then
-      jelly.debug("kite cd %s", path_to)
-      cd(kite_winid, bufnr, path_to)
-    else
-      open_mode = open_mode or "inplace"
-      jelly.debug("%s %s", open_mode, path_to)
-      edit_file(kite_winid, path_to, open_mode)
-    end
-  end
-
-  -- goto child dir
-  function M.rhs_open_dir(bufnr)
-    bufnr = bufnr or api.nvim_get_current_buf()
-
-    local kite_winid = api.nvim_get_current_win()
-    local root = dirbuf.kite_root(bufnr)
-
-    local cursor = wincursor.position(kite_winid)
-
-    local fname = entfmt.strip(buflines.line(bufnr, cursor.lnum))
-    if fname == "" then return end
-
-    if not entfmt.is_dir(fname) then return end
-
-    state.cursor_row(root, cursor.row)
-
-    local path_to = fs.joinpath(root, fname)
-    cd(kite_winid, bufnr, path_to)
-  end
-
-  -- goto parent dir, made for keymap
-  function M.rhs_parent(bufnr)
-    bufnr = bufnr or api.nvim_get_current_buf()
-
-    local kite_winid = api.nvim_get_current_win()
-    local root = dirbuf.kite_root(bufnr)
-    local parent = fs.parent(root)
-
-    state.cursor_row(root, wincursor.row(kite_winid))
-
-    cd(kite_winid, bufnr, parent)
-  end
-
-  -- made for operations which require a headless kite
-  ---@param direction 'prev'|'next'
-  ---@param open_mode? infra.bufopen.Mode
-  function M.rhs_open_sibling_file(direction, open_mode)
-    direction = direction or "next"
-    open_mode = open_mode or "inplace"
-
-    repeats.remember_paren(function() M.rhs_open_sibling_file("next", "inplace") end, function() M.rhs_open_sibling_file("prev", "inplace") end)
-
-    local move_step
-    if direction == "next" then
-      move_step = function(i) return i + 1 end
-    elseif direction == "prev" then
-      move_step = function(i) return i - 1 end
-    else
-      error("unknown direction")
-    end
-
-    local root = vim.fn.expand("%:p:h")
-
-    local sibling_cursor_row
-    local sibling_fpath
-    do
-      local cursor_row = state.cursor_row(root) or 1
-      local entries = state.entries(root)
-      assert(cursor_row >= 1 and cursor_row <= #entries)
-      local step = cursor_row
-      while true do
-        step = move_step(step)
-        local entry = entries[step]
-        if entry == nil then break end
-        if not entfmt.is_dir(entry) then
-          sibling_cursor_row = step
-          sibling_fpath = fs.joinpath(root, entfmt.strip(entry))
-          break
-        end
-      end
-
-      if sibling_cursor_row == nil then return jelly.info("reached last/first sibling file") end
-    end
-
-    state.cursor_row(root, sibling_cursor_row)
-    edit_file(nil, sibling_fpath, open_mode)
-  end
-
-  function M.rhs_refresh(bufnr)
-    bufnr = bufnr or api.nvim_get_current_buf()
-
-    local kite_winid = api.nvim_get_current_win()
-    local root = dirbuf.kite_root(bufnr)
-
-    state.forget_entries(root)
-    cd(kite_winid, bufnr, root)
-  end
-
-  function M.rhs_bufdir_stats(bufnr)
-    local root = dirbuf.kite_root(bufnr)
+  local sibling_cursor_row, sibling_fpath
+  do
+    local cursor_row = state.cursor_row(root) or 1
     local entries = state.entries(root)
-    jelly.info('"%s" %s entries', root, #entries)
+    assert(cursor_row >= 1 and cursor_row <= #entries)
+    local step = cursor_row
+    while true do
+      step = move_step(step)
+      local entry = entries[step]
+      if entry == nil then break end
+      if not entfmt.is_dir(entry) then
+        sibling_cursor_row = step
+        sibling_fpath = fs.joinpath(root, entfmt.strip(entry))
+        break
+      end
+    end
+
+    if sibling_cursor_row == nil then return jelly.info("reached last/first sibling file") end
   end
+
+  state.cursor_row(root, sibling_cursor_row)
+  bufopen(open_mode, sibling_fpath)
 end
 
 M.clear_cache = state.clear_cache
