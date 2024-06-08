@@ -45,7 +45,7 @@ do
       if root == nil then return jelly.warn("cant resolve root dir of buf#%d", anchor_bufnr) end
     end
 
-    local kite_winid = UI(root)
+    local kite_winid = UI(anchor_winid, root)
 
     _ = (function() --- update cursor only when kite fly from normal buffer
       if anchor_bufnr == nil then return end
@@ -64,7 +64,7 @@ function M.land(root)
   if root == nil then root = vim.fn.expand("%:p:h") end
   local anchor_winid = api.nvim_get_current_win()
 
-  UI(root, function(bufnr)
+  UI(anchor_winid, root, function(bufnr)
     local winid = api.nvim_get_current_win()
     api.nvim_win_set_buf(winid, bufnr)
     return winid

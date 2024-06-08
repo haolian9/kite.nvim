@@ -46,59 +46,46 @@ end
 local RHS
 do
   ---@class kite.RHS
+  ---@field anchor integer
   ---@field bufnr integer
   ---@field root string @changes on every cd
   local Impl = {}
   Impl.__index = Impl
 
-  do
-    ---@param winid integer
-    ---@param force? boolean
-    ---@return boolean
-    local function need_resize(winid, force)
-      if is_landwin(winid) then return false end
-      if force == nil then return false end
-      return force
-    end
+  ---@private
+  ---@param winid integer
+  ---@param dest string
+  function Impl:cd(winid, dest)
+    state.trail_behind(dest, self.root)
 
-    ---@private
-    ---@param winid integer
-    ---@param dest string
-    function Impl:cd(winid, dest, force_resize)
-      state.trail_behind(dest, self.root)
+    do
+      local entries = state.entries(dest)
 
-      do
-        local entries = state.entries(dest)
+      ctx.modifiable(self.bufnr, function() buflines.replaces_all(self.bufnr, entries) end)
 
-        ctx.modifiable(self.bufnr, function() buflines.replaces_all(self.bufnr, entries) end)
-
-        if self.root ~= dest then --
-          bufrename(self.bufnr, string.format("kite://%s", fs.basename(dest)))
-        end
-
-        if need_resize(winid, force_resize) then --
-          api.nvim_win_set_config(winid, resolve_geometry(dest))
-        end
-
-        do --cursor
-          local cursor_row = state.cursor_row(dest)
-          if cursor_row == nil then
-            -- fresh load
-            cursor_row = 1
-          elseif #entries == 0 then
-            -- empty dir
-            cursor_row = 1
-          elseif cursor_row > #entries then
-            -- last entry has been removed
-            cursor_row = #entries
-          end
-
-          wincursor.g1(winid, cursor_row, 0)
-        end
+      if self.root ~= dest then --update bufname
+        bufrename(self.bufnr, string.format("kite://%s", fs.basename(dest)))
       end
 
-      self.root = dest
+      if not is_landwin(winid) then --win resize
+        local winopts = dictlib.merged({ relative = "cursor", border = "single" }, resolve_geometry(dest))
+        ctx.win(self.anchor, function() api.nvim_win_set_config(winid, winopts) end)
+      end
+
+      do --cursor
+        local cursor_row = state.cursor_row(dest)
+        if cursor_row == nil then -- fresh load
+          cursor_row = 1
+        elseif #entries == 0 then -- empty dir
+          cursor_row = 1
+        elseif cursor_row > #entries then -- last entry has been removed
+          cursor_row = #entries
+        end
+        wincursor.g1(winid, cursor_row, 0)
+      end
     end
+
+    self.root = dest
   end
 
   do
@@ -190,7 +177,7 @@ do
         local kite_winopts = api.nvim_win_get_config(kite_winid)
         open_win = function(_, beckon_bufnr)
           local beckon_winid = default_open_win(beckon_bufnr, self.root)
-          api.nvim_win_set_config(beckon_winid, kite_winopts)
+          ctx.win(self.anchor, function() api.nvim_win_set_config(beckon_winid, kite_winopts) end)
           return beckon_winid
         end
       end
@@ -204,22 +191,31 @@ do
     end
   end
 
+  ---@param anchor integer
   ---@param bufnr integer
   ---@param root string
   ---@return kite.RHS
-  function RHS(bufnr, root) return setmetatable({ bufnr = bufnr, root = root }, Impl) end
+  function RHS(anchor, bufnr, root) return setmetatable({ anchor = anchor, bufnr = bufnr, root = root }, Impl) end
 end
 
----@param root string
+---@param anchor integer @the window that kite floatwins anchor to
+---@param root string @absolute path
+---@param open_win? fun(bufnr:integer,root:string):winid:integer
+---@return integer winid
 ---@return integer bufnr
-local function create_buf(root)
-  local function namefn() return string.format("kite://%s", fs.basename(root)) end
-  local bufnr = Ephemeral({ handyclose = true, namefn = namefn }, state.entries(root))
-  prefer.bo(bufnr, "filetype", "kite")
+return function(anchor, root, open_win)
+  open_win = open_win or default_open_win
+
+  local bufnr
+  do
+    local function namefn() return string.format("kite://%s", fs.basename(root)) end
+    bufnr = Ephemeral({ handyclose = true, namefn = namefn }, state.entries(root))
+    prefer.bo(bufnr, "filetype", "kite")
+  end
 
   do --keymaps
     local bm = bufmap.wraps(bufnr)
-    local rhs = RHS(bufnr, root)
+    local rhs = RHS(anchor, bufnr, root)
 
     --stylua: ignore start
     bm.n("<cr>",  function() rhs:open("inplace") end)
@@ -238,17 +234,6 @@ local function create_buf(root)
     --stylua: ignore end
   end
 
-  return bufnr
-end
-
----@param root string @absolute path
----@param open_win? fun(bufnr:integer,root:string):winid:integer
----@return integer winid
----@return integer bufnr
-return function(root, open_win)
-  open_win = open_win or default_open_win
-
-  local bufnr = create_buf(root)
   local winid = open_win(bufnr, root)
 
   return winid, bufnr
