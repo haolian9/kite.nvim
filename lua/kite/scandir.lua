@@ -1,5 +1,5 @@
 local fs = require("infra.fs")
-local itertools = require("infra.itertools")
+local its = require("infra.its")
 
 local entfmt = require("kite.entfmt")
 local facts = require("kite.facts")
@@ -23,11 +23,9 @@ end
 --scan entities in the given dir, each entity will be formatted by the formatter
 ---@return string[]
 return function(dir)
-  local iter
-  iter = fs.iterdir(dir)
-  iter = itertools.filtern(filter_ent, iter)
-  iter = itertools.slice(iter, 1, facts.max_children + 1)
-  iter = itertools.mapn(format_ent, iter)
-
-  return itertools.tolist(iter)
+  return its(fs.iterdir(dir)) --
+    :filtern(filter_ent)
+    :slice(1, facts.max_children + 1)
+    :mapn(format_ent)
+    :tolist()
 end

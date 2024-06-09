@@ -1,13 +1,15 @@
+local M = {}
+
 local dictlib = require("infra.dictlib")
 local fs = require("infra.fs")
-local itertools = require("infra.itertools")
+local its = require("infra.its")
 local jelly = require("infra.jellyfish")("kite.state")
 local strlib = require("infra.strlib")
 
 local entfmt = require("kite.entfmt")
 local scandir = require("kite.scandir")
 
-local M = {}
+local api = vim.api
 
 local cache = {}
 do
@@ -66,7 +68,7 @@ function M.widest(root)
   local known = cache:get(root, "widest")
   if known ~= nil then return known end
 
-  local widest = itertools.max(itertools.map(string.len, M.entries(root))) or 0
+  local widest = its(M.entries(root)):map(api.nvim_strwidth):max() or 0
   cache:set(root, "widest", widest)
   return widest
 end
