@@ -9,7 +9,7 @@ end
 
 function M.dir(basename)
   assert(not strlib.startswith(basename, "/"))
-  return string.format(" %s%s", basename, "/")
+  return string.format(" %s/", basename)
 end
 
 function M.strip(formatted) return strlib.lstrip(formatted, " ") end

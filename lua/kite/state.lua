@@ -89,7 +89,7 @@ end
 
 ---@param to string
 ---@param from string?
-function M.trail_behind(to, from)
+function M.trail(to, from)
   local heading = (function()
     if from == nil then return "lost" end
     if to == from then return "stay" end

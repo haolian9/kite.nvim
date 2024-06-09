@@ -56,7 +56,7 @@ do
   ---@param winid integer
   ---@param dest string
   function Impl:cd(winid, dest)
-    state.trail_behind(dest, self.root)
+    state.trail(dest, self.root)
 
     do
       local entries = state.entries(dest)
