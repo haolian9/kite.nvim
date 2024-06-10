@@ -168,13 +168,19 @@ do
     local action_mode = { i = "inplace", a = "inplace", v = "right", o = "below", t = "tab", cr = "inplace", space = "inplace" }
 
     function Impl:beckon()
+      if #state.entries(self.root) <= 3 then return jelly.info("less than 3 entries, refuse to launch beckon") end
+
       local kite_winid = api.nvim_get_current_win()
 
       local open_win
       if is_landwin(kite_winid) then
         open_win = function(_, beckon_bufnr) return default_open_win(beckon_bufnr, self.root) end
       else
+        ---@type {height:integer, width:integer, win:integer}
         local kite_winopts = api.nvim_win_get_config(kite_winid)
+        kite_winopts.win = nil
+        assert(kite_winopts.height > 1)
+
         open_win = function(_, beckon_bufnr)
           local beckon_winid = default_open_win(beckon_bufnr, self.root)
           ctx.win(self.anchor, function() api.nvim_win_set_config(beckon_winid, kite_winopts) end)
