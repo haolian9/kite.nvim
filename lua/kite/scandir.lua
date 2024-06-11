@@ -2,6 +2,7 @@ local fs = require("infra.fs")
 local its = require("infra.its")
 
 local entfmt = require("kite.entfmt")
+local g = require("kite.g")
 
 local function filter(fname, ftype)
   local _ = fname
@@ -24,7 +25,7 @@ end
 return function(dir)
   return its(fs.iterdir(dir)) --
     :filtern(filter)
-    :slice(1, 999 + 1)
+    :slice(1, g.max_entries_per_dir + 1)
     :mapn(format)
     :tolist()
 end
