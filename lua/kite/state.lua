@@ -83,8 +83,7 @@ function M.entry_index(entries, formatted, default)
     if val == formatted then return key end
   end
   if default ~= nil then return default end
-  jelly.err("entries=%s, formatted=%s, default=%s", vim.json.encode(entries), formatted, default)
-  error("unreachable")
+  return jelly.fatal("NotFoundError", "entries=%s, formatted=%s, default=%s", entries, formatted, default)
 end
 
 ---@param to string

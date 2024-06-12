@@ -1,5 +1,6 @@
 local fs = require("infra.fs")
 local its = require("infra.its")
+local jelly = require("infra.jellyfish")("kite.scandir", "debug")
 
 local entfmt = require("kite.entfmt")
 local g = require("kite.g")
@@ -16,7 +17,7 @@ local function format(fname, ftype)
   elseif ftype == "directory" then
     return entfmt.dir(fname)
   else
-    error("unexpected file type: " .. ftype)
+    return jelly.fatal("ValueError", "unexpected ftype(%s) of %s", ftype, fname)
   end
 end
 
@@ -25,7 +26,7 @@ end
 return function(dir)
   return its(fs.iterdir(dir)) --
     :filtern(filter)
-    :slice(1, g.max_entries_per_dir + 1)
+    :slicen(0, g.max_entries_per_dir)
     :mapn(format)
     :tolist()
 end
