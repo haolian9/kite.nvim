@@ -11,7 +11,7 @@ local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
-local beckon_select = require("beckon.select")
+local beckonize = require("beckon.beckonize")
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
 
@@ -168,30 +168,9 @@ do
     local action_mode = { i = "inplace", a = "inplace", v = "right", o = "below", t = "tab", cr = "inplace", space = "inplace" }
 
     function Impl:beckon()
-      if #state.entries(self.root) <= 3 then return jelly.info("less than 3 entries, refuse to launch beckon") end
-
       local kite_winid = api.nvim_get_current_win()
-
-      local open_win
-      if is_landwin(kite_winid) then
-        open_win = function(_, beckon_bufnr) return default_open_win(beckon_bufnr, self.root) end
-      else
-        ---@type {height:integer, width:integer, win:integer}
-        local kite_winopts = api.nvim_win_get_config(kite_winid)
-        kite_winopts.win = nil
-        assert(kite_winopts.height > 1)
-
-        open_win = function(_, beckon_bufnr)
-          local beckon_winid = default_open_win(beckon_bufnr, self.root)
-          ctx.win(self.anchor, function() api.nvim_win_set_config(beckon_winid, kite_winopts) end)
-          return beckon_winid
-        end
-      end
-
-      beckon_select(state.entries(self.root), {
-        open_win = open_win,
-      }, function(_, row, action) --
-        wincursor.g1(kite_winid, row, 0)
+      return beckonize(kite_winid, function(lnum, action)
+        wincursor.go(kite_winid, lnum, 0)
         self:open(action_mode[action])
       end)
     end
