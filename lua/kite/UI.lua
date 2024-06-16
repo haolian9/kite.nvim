@@ -7,6 +7,7 @@ local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite.ui", "info")
 local bufmap = require("infra.keymap.buffer")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
@@ -15,9 +16,7 @@ local beckonize = require("beckon.beckonize")
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
 
-local api = vim.api
-
-local function is_landwin(winid) return api.nvim_win_get_config(winid).relative == "" end
+local function is_landwin(winid) return ni.win_get_config(winid).relative == "" end
 
 local function resolve_geometry(root)
   local width = math.max(30, math.min(state.widest(root) + 4, 50))
@@ -37,7 +36,7 @@ local function default_open_win(bufnr, root)
   local wo = prefer.win(winid)
   wo.number = false
   wo.relativenumber = false
-  api.nvim_win_set_hl_ns(winid, rifts.ns)
+  ni.win_set_hl_ns(winid, rifts.ns)
   --intended to have no auto-close on winleave
 
   return winid
@@ -69,7 +68,7 @@ do
 
       if not is_landwin(winid) then --win resize
         local winopts = dictlib.merged({ relative = "cursor", border = "single" }, resolve_geometry(dest))
-        ctx.win(self.anchor, function() api.nvim_win_set_config(winid, winopts) end)
+        ctx.win(self.anchor, function() ni.win_set_config(winid, winopts) end)
       end
 
       do --cursor
@@ -88,45 +87,39 @@ do
     self.root = dest
   end
 
-  do
-    ---@param kite_winid? integer
-    ---@param path string
-    ---@param open_mode infra.bufopen.Mode
-    local function edit_file(kite_winid, path, open_mode)
+  ---open root/file or goto root/dir/
+  ---@param open_mode? infra.bufopen.Mode
+  function Impl:open(open_mode)
+    local kite_winid = ni.get_current_win()
+    local cursor = wincursor.position(kite_winid)
+
+    local fname = entfmt.strip(buflines.line(self.bufnr, cursor.lnum))
+    if fname == "" then return jelly.warn("no file found at the cursor line") end
+
+    state.cursor_row(self.root, cursor.row)
+
+    local path_to = fs.joinpath(self.root, fname)
+    if entfmt.is_dir(fname) then
+      jelly.debug("kite cd %s", path_to)
+      self:cd(kite_winid, path_to)
+    else
+      open_mode = open_mode or "inplace"
+      jelly.debug("%s %s", open_mode, path_to)
       ---no closing kite win when the kite buffer is
       ---* not bound to any window
       ---* bound to a landed window
-      if kite_winid and not is_landwin(kite_winid) then api.nvim_win_close(kite_winid, false) end
-
-      bufopen(open_mode, path)
-    end
-
-    ---open root/file or goto root/dir/
-    ---@param open_mode? infra.bufopen.Mode
-    function Impl:open(open_mode)
-      local kite_winid = api.nvim_get_current_win()
-      local cursor = wincursor.position(kite_winid)
-
-      local fname = entfmt.strip(buflines.line(self.bufnr, cursor.lnum))
-      if fname == "" then return jelly.warn("no file found at the cursor line") end
-
-      state.cursor_row(self.root, cursor.row)
-
-      local path_to = fs.joinpath(self.root, fname)
-      if entfmt.is_dir(fname) then
-        jelly.debug("kite cd %s", path_to)
-        self:cd(kite_winid, path_to)
-      else
-        open_mode = open_mode or "inplace"
-        jelly.debug("%s %s", open_mode, path_to)
-        edit_file(kite_winid, path_to, open_mode)
+      if kite_winid and not is_landwin(kite_winid) then
+        ni.win_close(kite_winid, false)
+        ---necessary, as nvim moves cursor/focus 'randomly' on every window closing
+        ni.set_current_win(self.anchor)
       end
+      bufopen(open_mode, path_to)
     end
   end
 
   ---goto root/dir/
   function Impl:open_dir()
-    local kite_winid = api.nvim_get_current_win()
+    local kite_winid = ni.get_current_win()
 
     local cursor = wincursor.position(kite_winid)
 
@@ -143,7 +136,7 @@ do
 
   -- goto parent dir, made for keymap
   function Impl:parent()
-    local kite_winid = api.nvim_get_current_win()
+    local kite_winid = ni.get_current_win()
     local parent = fs.parent(self.root)
 
     state.cursor_row(self.root, wincursor.row(kite_winid))
@@ -152,7 +145,7 @@ do
   end
 
   function Impl:reload()
-    local winid = api.nvim_get_current_win()
+    local winid = ni.get_current_win()
 
     local root = self.root
     state.forget_entries(root)
@@ -168,7 +161,7 @@ do
     local action_mode = { i = "inplace", a = "inplace", v = "right", o = "below", t = "tab", cr = "inplace", space = "inplace" }
 
     function Impl:beckon()
-      local kite_winid = api.nvim_get_current_win()
+      local kite_winid = ni.get_current_win()
       return beckonize(kite_winid, function(lnum, action)
         wincursor.go(kite_winid, lnum, 0)
         self:open(action_mode[action])

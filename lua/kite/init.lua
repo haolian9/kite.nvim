@@ -16,6 +16,7 @@ local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local repeats = require("infra.repeats")
 local wincursor = require("infra.wincursor")
@@ -24,11 +25,9 @@ local entfmt = require("kite.entfmt")
 local state = require("kite.state")
 local UI = require("kite.UI")
 
-local api = vim.api
-
 do
   local function resolve_root(bufnr)
-    if prefer.bo(bufnr, "buftype") == "help" then return fs.parent(api.nvim_buf_get_name(bufnr)) end
+    if prefer.bo(bufnr, "buftype") == "help" then return fs.parent(ni.buf_get_name(bufnr)) end
     return bufpath.dir(bufnr, true)
   end
 
@@ -36,11 +35,11 @@ do
   --NB: the current buffer should be either buftype={"",help}
   ---@param root? string @nil=bufpath.dir(current_buf)
   function M.fly(root)
-    local anchor_winid = api.nvim_get_current_win()
+    local anchor_winid = ni.get_current_win()
     local anchor_bufnr -- exclusive with root
 
     if root == nil then
-      anchor_bufnr = api.nvim_win_get_buf(anchor_winid)
+      anchor_bufnr = ni.win_get_buf(anchor_winid)
       root = resolve_root(anchor_bufnr)
       if root == nil then return jelly.warn("cant resolve root dir of buf#%d", anchor_bufnr) end
     end
@@ -62,11 +61,11 @@ end
 ---@param root string? @absolute dir
 function M.land(root)
   if root == nil then root = vim.fn.expand("%:p:h") end
-  local anchor_winid = api.nvim_get_current_win()
+  local anchor_winid = ni.get_current_win()
 
   UI(anchor_winid, root, function(bufnr)
-    local winid = api.nvim_get_current_win()
-    api.nvim_win_set_buf(winid, bufnr)
+    local winid = ni.get_current_win()
+    ni.win_set_buf(winid, bufnr)
     return winid
   end)
 end

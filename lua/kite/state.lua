@@ -1,27 +1,26 @@
 local M = {}
 
-local dictlib = require("infra.dictlib")
 local fs = require("infra.fs")
 local its = require("infra.its")
 local jelly = require("infra.jellyfish")("kite.state")
+local LRU = require("infra.LRU")
+local ni = require("infra.ni")
 local strlib = require("infra.strlib")
 
 local entfmt = require("kite.entfmt")
 local scandir = require("kite.scandir")
-
-local api = vim.api
 
 local cache = {}
 do
   ---@private
   ---{root: {entries: [formatted-path], cursor_row: 0-based-int, widest: max(#entry)}}
   ---@type {[string]: {entries:string[]?, cursor_row:number?, widest:number?}}
-  cache.dict = dictlib.CappedDict(512)
+  cache.lru = LRU(128)
 
   ---@param root string
   ---@param key 'entries'|'cursor_row'|'widest'
   function cache:get(root, key)
-    local record = self.dict[root]
+    local record = self.lru[root]
     if record == nil then return end
     return record[key]
   end
@@ -30,8 +29,8 @@ do
   ---@param key string
   ---@param val string[]|number?
   function cache:set(root, key, val)
-    if self.dict[root] == nil then self.dict[root] = {} end
-    self.dict[root][key] = val
+    if self.lru[root] == nil then self.lru[root] = {} end
+    self.lru[root][key] = val
   end
 end
 
@@ -68,7 +67,7 @@ function M.widest(root)
   local known = cache:get(root, "widest")
   if known ~= nil then return known end
 
-  local widest = its(M.entries(root)):map(api.nvim_strwidth):max() or 0
+  local widest = its(M.entries(root)):map(ni.strwidth):max() or 0
   cache:set(root, "widest", widest)
   return widest
 end
@@ -123,6 +122,6 @@ function M.trail(to, from)
   end
 end
 
-function M.clear_cache() cache.dict = dictlib.CappedDict(512) end
+function M.clear_cache() cache.lru = LRU(128) end
 
 return M
