@@ -15,6 +15,7 @@ local wincursor = require("infra.wincursor")
 local beckonize = require("beckon.beckonize")
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
+local puff = require("puff")
 
 local function is_landwin(winid) return ni.win_get_config(winid).relative == "" end
 
@@ -87,6 +88,23 @@ do
     self.root = dest
   end
 
+  ---@private
+  function Impl:open_abs_file(open_mode, fpath)
+    open_mode = open_mode or "inplace"
+    jelly.debug("%s %s", open_mode, fpath)
+
+    local kite_winid = ni.get_current_win()
+    ---no closing kite win when the kite buffer is
+    ---* not bound to any window
+    ---* bound to a landed window
+    if kite_winid and not is_landwin(kite_winid) then
+      ni.win_close(kite_winid, false)
+      ---necessary, as nvim moves cursor/focus 'randomly' on every window closing
+      ni.set_current_win(self.anchor)
+    end
+    bufopen(open_mode, fpath)
+  end
+
   ---open root/file or goto root/dir/
   ---@param open_mode? infra.bufopen.Mode
   function Impl:open(open_mode)
@@ -103,17 +121,7 @@ do
       jelly.debug("kite cd %s", path_to)
       self:cd(kite_winid, path_to)
     else
-      open_mode = open_mode or "inplace"
-      jelly.debug("%s %s", open_mode, path_to)
-      ---no closing kite win when the kite buffer is
-      ---* not bound to any window
-      ---* bound to a landed window
-      if kite_winid and not is_landwin(kite_winid) then
-        ni.win_close(kite_winid, false)
-        ---necessary, as nvim moves cursor/focus 'randomly' on every window closing
-        ni.set_current_win(self.anchor)
-      end
-      bufopen(open_mode, path_to)
+      self:open_abs_file(open_mode, path_to)
     end
   end
 
@@ -132,6 +140,14 @@ do
 
     local path_to = fs.joinpath(self.root, fname)
     self:cd(kite_winid, path_to)
+  end
+
+  ---open a file in the current dir
+  function Impl:open_rel_file()
+    puff.input({ icon = "📄", prompt = "Edit", startinsert = "a" }, function(fname)
+      if fname == nil or fname == "" then return end
+      self:open_abs_file("right", fs.joinpath(self.root, fname))
+    end)
   end
 
   -- goto parent dir, made for keymap
@@ -209,6 +225,7 @@ return function(anchor, root, open_win)
     bm.n("r",     function() rhs:reload() end)
     bm.n("<c-g>", function() rhs:stats() end)
     bm.n("/",     function() rhs:beckon() end)
+    bm.n("E",     function() rhs:open_rel_file() end)
     --stylua: ignore end
   end
 
