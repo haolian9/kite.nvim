@@ -38,7 +38,6 @@ end
 ---@param newval number?
 ---@return number?
 function M.cursor_row(root, newval)
-  ---@diagnostic disable-next-line
   if newval == nil then return cache:get(root, "cursor_row") end
   assert(newval > 0)
   cache:set(root, "cursor_row", newval)
@@ -56,7 +55,6 @@ function M.entries(root)
     cache:set(root, "entries", entries)
   end
 
-  ---@diagnostic disable-next-line
   return entries
 end
 
