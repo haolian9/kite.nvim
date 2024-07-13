@@ -7,6 +7,7 @@ local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite.ui", "info")
 local bufmap = require("infra.keymap.buffer")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
@@ -16,8 +17,6 @@ local beckonize = require("beckon.beckonize")
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
 local puff = require("puff")
-
-local function is_landwin(winid) return ni.win_get_config(winid).relative == "" end
 
 local function resolve_geometry(root)
   local width = math.max(30, math.min(state.widest(root) + 4, 50))
@@ -67,7 +66,7 @@ do
         bufrename(self.bufnr, string.format("kite://%s", fs.basename(dest)))
       end
 
-      if not is_landwin(winid) then --win resize
+      if mi.win_is_float(winid) then --win resize
         local winopts = dictlib.merged({ relative = "cursor", border = "single" }, resolve_geometry(dest))
         ctx.win(self.anchor, function() ni.win_set_config(winid, winopts) end)
       end
@@ -97,7 +96,7 @@ do
     ---no closing kite win when the kite buffer is
     ---* not bound to any window
     ---* bound to a landed window
-    if kite_winid and not is_landwin(kite_winid) then
+    if kite_winid and mi.win_is_float(kite_winid) then
       ni.win_close(kite_winid, false)
       ---necessary, as nvim moves cursor/focus 'randomly' on every window closing
       ni.set_current_win(self.anchor)
