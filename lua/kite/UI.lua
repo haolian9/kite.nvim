@@ -36,6 +36,7 @@ local function default_open_win(bufnr, root)
   local wo = prefer.win(winid)
   wo.number = false
   wo.relativenumber = false
+  wo.fillchars = "eob: " --make eob:~ invisible. :h EndOfBuffer
   ni.win_set_hl_ns(winid, rifts.ns)
   --intended to have no auto-close on winleave
 
