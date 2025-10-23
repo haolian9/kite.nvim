@@ -77,7 +77,7 @@ function M.open_sibling_file(direction, open_mode)
   direction = direction or "next"
   open_mode = open_mode or "inplace"
 
-  repeats.remember_paren(function() M.rhs_open_sibling_file("next", "inplace") end, function() M.rhs_open_sibling_file("prev", "inplace") end)
+  repeats.remember_paren(function() M.open_sibling_file("next", "inplace") end, function() M.open_sibling_file("prev", "inplace") end)
 
   local move_step
   if direction == "next" then
