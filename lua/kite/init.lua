@@ -13,6 +13,7 @@
 local M = {}
 
 local bufopen = require("infra.bufopen")
+local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
@@ -20,6 +21,7 @@ local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local repeats = require("infra.repeats")
 local wincursor = require("infra.wincursor")
+local winsplit = require("infra.winsplit")
 
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")
@@ -59,14 +61,15 @@ end
 
 -- show content of root with kite in current window
 ---@param root string? @absolute dir
-function M.land(root)
+---@param open_mode infra.bufopen.Mode? @nil=inplace
+function M.land(root, open_mode)
   if root == nil then root = vim.fn.expand("%:p:h") end
+  if open_mode == nil then open_mode = "inplace" end
   local anchor_winid = ni.get_current_win()
 
   UI(anchor_winid, root, function(bufnr)
-    local winid = ni.get_current_win()
-    ni.win_set_buf(winid, bufnr)
-    return winid
+    bufopen(open_mode, bufnr)
+    return ni.get_current_win()
   end)
 end
 
