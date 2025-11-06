@@ -13,7 +13,6 @@
 local M = {}
 
 local bufopen = require("infra.bufopen")
-local bufopen = require("infra.bufopen")
 local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("kite")
@@ -21,7 +20,6 @@ local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local repeats = require("infra.repeats")
 local wincursor = require("infra.wincursor")
-local winsplit = require("infra.winsplit")
 
 local entfmt = require("kite.entfmt")
 local state = require("kite.state")

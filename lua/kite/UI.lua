@@ -56,10 +56,24 @@ do
   ---@param winid integer
   ---@param dest string
   function Impl:cd(winid, dest)
-    state.trail(dest, self.root)
+    if not fs.dir_exists(dest) then
+      jelly.info("%s exists not, going upward", dest)
+      local parent = dest
+      while parent ~= "/" do
+        state.forget(parent) --as parent's lost children
+        if fs.dir_exists(parent) then break end
+        parent = fs.parent(parent)
+      end
+      dest = parent
+    end
+    --prevent cd in the same dir, except reloading
+    if dest == self.root and not state.entries_exist(dest) then return end
 
     do
+      state.trail(dest, self.root)
+
       local entries = state.entries(dest)
+      local cursor_row = assert(state.cursor_row(dest))
 
       ctx.modifiable(self.bufnr, function() buflines.replaces_all(self.bufnr, entries) end)
 
@@ -72,17 +86,7 @@ do
         ctx.win(self.anchor, function() ni.win_set_config(winid, winopts) end)
       end
 
-      do --cursor
-        local cursor_row = state.cursor_row(dest)
-        if cursor_row == nil then -- fresh load
-          cursor_row = 1
-        elseif #entries == 0 then -- empty dir
-          cursor_row = 1
-        elseif cursor_row > #entries then -- last entry has been removed
-          cursor_row = #entries
-        end
-        wincursor.g1(winid, cursor_row, 0)
-      end
+      wincursor.g1(winid, cursor_row, 0)
     end
 
     self.root = dest
@@ -164,7 +168,8 @@ do
     local winid = ni.get_current_win()
 
     local root = self.root
-    state.forget_entries(root)
+    jelly.debug("reloading %s", root)
+    state.forget(root)
     self:cd(winid, root)
   end
 

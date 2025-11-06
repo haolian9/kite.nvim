@@ -26,7 +26,7 @@ do
   end
 
   ---@param root string
-  ---@param key string
+  ---@param key 'entries'|'cursor_row'|'widest'
   ---@param val string[]|number?
   function cache:set(root, key, val)
     if self.lru[root] == nil then self.lru[root] = {} end
@@ -34,16 +34,18 @@ do
   end
 end
 
----@param root string
----@param newval number?
----@return number?
-function M.cursor_row(root, newval)
-  if newval == nil then return cache:get(root, "cursor_row") end
-  assert(newval > 0)
-  cache:set(root, "cursor_row", newval)
+function M.forget(root)
+  cache:set(root, "entries", nil)
+  cache:set(root, "cursor_row", nil)
+  cache:set(root, "widest", nil)
 end
 
-function M.forget_entries(root) cache:set(root, "entries", nil) end
+---@param root string @abspath
+---@return boolean
+function M.entries_exist(root)
+  assert(root ~= nil)
+  return cache:get(root, "entries") == nil
+end
 
 ---@return string[]
 function M.entries(root)
@@ -56,6 +58,17 @@ function M.entries(root)
   end
 
   return entries
+end
+
+---@param root string
+---@param newval number?
+---@return number?
+function M.cursor_row(root, newval)
+  if newval == nil then return cache:get(root, "cursor_row") end
+  assert(newval > 0, "cursor_row must > 0")
+  assert(newval <= #M.entries(root), "cursor_row must <= entries.len")
+  -- newval = math.min(newval, math.max(1, #M.entries(root)))
+  cache:set(root, "cursor_row", newval)
 end
 
 --get the max entry-width of the root
@@ -73,9 +86,10 @@ end
 --get the given formatted entry's index the entries
 ---@param entries string[]
 ---@param formatted string
----@param default ?number
+---@param default number
 ---@return number
 function M.entry_index(entries, formatted, default)
+  assert(default ~= nil and type(default) == "number")
   for key, val in ipairs(entries) do
     if val == formatted then return key end
   end
@@ -83,40 +97,50 @@ function M.entry_index(entries, formatted, default)
   return jelly.fatal("NotFoundError", "entries=%s, formatted=%s, default=%s", entries, formatted, default)
 end
 
----@param to string
----@param from string?
-function M.trail(to, from)
-  local heading = (function()
+do
+  local function resolve_heading(to, from)
     if from == nil then return "lost" end
     if to == from then return "stay" end
     if strlib.startswith(to, from) then return "go_inside" end
     if strlib.startswith(from, to) then return "go_outside" end
     return "lost"
-  end)()
+  end
 
-  if heading == "go_inside" then
-    local outer, inner = from, to
-    assert(outer)
-    -- add trail outer->inner
-    if M.cursor_row(outer) == nil then
-      local inner_basename = fs.basename(inner)
-      M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
+  local function main(to, from)
+    local heading = resolve_heading(to, from)
+    if heading == "go_inside" then
+      local outer, inner = from, to
+      assert(outer)
+      -- add trail outer->inner
+      if M.cursor_row(outer) == nil then
+        local inner_basename = fs.basename(inner)
+        M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename), 1))
+      end
+      if M.cursor_row(inner) then return end
+      M.cursor_row(inner, 1)
+    elseif heading == "go_outside" then
+      local outer, inner = to, from
+      if M.cursor_row(outer) then return end
+      -- add trail inner->outer
+      local inner_basename = fs.basename(assert(inner))
+      M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename), 1))
+    elseif heading == "lost" then
+      if M.cursor_row(to) then return end
+      M.cursor_row(to, 1)
+    elseif heading == "stay" then
+      if M.cursor_row(to) then return end
+      M.cursor_row(to, 1)
+    else
+      error("unable to resolve trail")
     end
-    if M.cursor_row(inner) then return end
-    M.cursor_row(inner, M.cursor_row(inner))
-  elseif heading == "go_outside" then
-    local outer, inner = to, from
-    if M.cursor_row(outer) then return end
-    -- add trail inner->outer
-    local inner_basename = fs.basename(assert(inner))
-    M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename)))
-  elseif heading == "lost" then
-    if M.cursor_row(to) then return end
-    M.cursor_row(to, 1)
-  elseif heading == "stay" then
-    --nop
-  else
-    error("unable to resolve trail")
+  end
+
+  ---@param to string
+  ---@param from string?
+  function M.trail(to, from)
+    main(to, from)
+    assert(M.cursor_row(to), "cursor_row should be set after .trail()")
+    assert(M.cursor_row(to) <= #M.entries(to), "cursor_row should be valid after .trail()")
   end
 end
 
