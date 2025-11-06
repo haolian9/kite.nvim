@@ -60,7 +60,7 @@ do
       jelly.info("%s exists not, going upward", dest)
       local parent = dest
       while parent ~= "/" do
-        state.forget(parent) --as parent's lost children
+        state.forget(parent) --as children were lost
         if fs.dir_exists(parent) then break end
         parent = fs.parent(parent)
       end
@@ -168,7 +168,6 @@ do
     local winid = ni.get_current_win()
 
     local root = self.root
-    jelly.debug("reloading %s", root)
     state.forget(root)
     self:cd(winid, root)
   end
