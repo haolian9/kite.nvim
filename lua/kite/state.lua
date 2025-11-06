@@ -2,7 +2,7 @@ local M = {}
 
 local fs = require("infra.fs")
 local its = require("infra.its")
-local jelly = require("infra.jellyfish")("kite.state")
+local jelly = require("infra.jellyfish")("kite.state", "info")
 local LRU = require("infra.LRU")
 local ni = require("infra.ni")
 local strlib = require("infra.strlib")
@@ -65,9 +65,6 @@ end
 ---@return number?
 function M.cursor_row(root, newval)
   if newval == nil then return cache:get(root, "cursor_row") end
-  assert(newval > 0, "cursor_row must > 0")
-  assert(newval <= #M.entries(root), "cursor_row must <= entries.len")
-  -- newval = math.min(newval, math.max(1, #M.entries(root)))
   cache:set(root, "cursor_row", newval)
 end
 
@@ -98,7 +95,7 @@ function M.entry_index(entries, formatted, default)
 end
 
 do
-  local function resolve_heading(to, from)
+  local function resolve_heading(from, to)
     if from == nil then return "lost" end
     if to == from then return "stay" end
     if strlib.startswith(to, from) then return "go_inside" end
@@ -106,8 +103,8 @@ do
     return "lost"
   end
 
-  local function main(to, from)
-    local heading = resolve_heading(to, from)
+  local function main(from, to)
+    local heading = resolve_heading(from, to)
     if heading == "go_inside" then
       local outer, inner = from, to
       assert(outer)
@@ -135,12 +132,12 @@ do
     end
   end
 
-  ---@param to string
   ---@param from string?
-  function M.trail(to, from)
-    main(to, from)
-    assert(M.cursor_row(to), "cursor_row should be set after .trail()")
-    assert(M.cursor_row(to) <= #M.entries(to), "cursor_row should be valid after .trail()")
+  ---@param to string
+  function M.trail(from, to)
+    main(from, to)
+    assert(M.cursor_row(to), "trail() doesnt set cursor_row")
+    assert(M.cursor_row(to) <= math.max(1, #M.entries(to)), "trail() resolves cursor_row wrong")
   end
 end
 

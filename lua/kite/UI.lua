@@ -70,7 +70,7 @@ do
     if dest == self.root and not state.entries_exist(dest) then return end
 
     do
-      state.trail(dest, self.root)
+      state.trail(self.root, dest)
 
       local entries = state.entries(dest)
       local cursor_row = assert(state.cursor_row(dest))
