@@ -117,8 +117,10 @@ do
       M.cursor_row(inner, 1)
     elseif heading == "go_outside" then
       local outer, inner = to, from
-      if M.cursor_row(outer) then return end
-      -- add trail inner->outer
+      --NB: inner as an entry of outer, it should be focused always,
+      --    no matter outer's cursor_row exists or not
+      --
+      --add trail inner->outer
       local inner_basename = fs.basename(assert(inner))
       M.cursor_row(outer, M.entry_index(M.entries(outer), entfmt.dir(inner_basename), 1))
     elseif heading == "lost" then
